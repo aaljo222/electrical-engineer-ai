@@ -235,18 +235,20 @@ if st.button("📖 설명 생성하기", type="primary", use_container_width=Tru
     if not problem_text or not formula:
         st.error("⚠️ 문제/공식을 입력하거나 사진을 업로드하세요.")
     else:
-        explanation, error = generate_explanation(problem_text, formula)
+        with st.spinner("Claude가 설명을 생성하고 있습니다... ⏳"):
+            explanation, error = generate_explanation(problem_text, formula)
 
         if error:
             st.error(error)
         else:
             st.success("✨ 설명 생성 완료!")
+
             st.markdown("### ✨ 생성 결과")
             st.markdown(explanation)
 
             st.download_button(
-                "📋 텍스트 다운로드",
-                explanation,
-                "전기기사_공식_설명.txt",
-                "text/plain"
+                label="📋 텍스트 다운로드",
+                data=explanation,
+                file_name="전기기사_공식_설명.txt",
+                mime="text/plain"
             )
