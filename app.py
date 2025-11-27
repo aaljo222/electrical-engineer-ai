@@ -5,7 +5,7 @@ import base64
 import io
 from PIL import Image
 from auth_db import login, signup, get_user, logout, save_history, get_history
-
+import os
 
 # -------------------------
 # PAGE CONFIG
@@ -17,14 +17,13 @@ st.markdown("<style>" + open("theme.css").read() + "</style>", unsafe_allow_html
 # -------------------------
 # ANTHROPIC CLIENT (SAFE)
 # -------------------------
-if "client" not in st.session_state:
-    st.session_state.client = anthropic.Anthropic(
-        api_key=st.secrets["ANTHROPIC_API_KEY"]
-    )
+api_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY", None)
 
-client = st.session_state.client  # 항상 세션에 저장된 client 사용
+if not api_key:
+    st.error("❗ Anthropic API Key가 설정되지 않았습니다.")
+    st.stop()
 
-
+st.session_state.client = anthropic.Anthropic(api_key=api_key)
 # -------------------------
 # IMAGE ANALYSIS (OCR)
 # -------------------------
