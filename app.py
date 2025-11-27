@@ -13,14 +13,24 @@ from auth_db import login, signup, get_user, logout, save_history, get_history
 st.set_page_config(page_title="전기기사 공식 AI 설명 생성기", page_icon="⚡", layout="wide")
 st.markdown("<style>" + open("theme.css").read() + "</style>", unsafe_allow_html=True)
 
-# Anthropic Client
-client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+
+# -------------------------
+# ANTHROPIC CLIENT (SAFE)
+# -------------------------
+if "client" not in st.session_state:
+    st.session_state.client = anthropic.Anthropic(
+        api_key=st.secrets["ANTHROPIC_API_KEY"]
+    )
+
+client = st.session_state.client  # 항상 세션에 저장된 client 사용
 
 
 # -------------------------
 # IMAGE ANALYSIS (OCR)
 # -------------------------
 def analyze_image(image_bytes):
+    client = st.session_state.client
+
     img_b64 = base64.b64encode(image_bytes).decode()
 
     prompt = """
@@ -61,6 +71,8 @@ def analyze_image(image_bytes):
 # GENERATE EXPLANATION
 # -------------------------
 def generate_explanation(problem, formula):
+    client = st.session_state.client
+
     prompt = f"""
 전기기사 문제를 단계별로 친절하게 설명하세요.
 
@@ -87,38 +99,38 @@ def generate_explanation(problem, formula):
 # LOGIN / SIGNUP UI
 # -------------------------
 def login_ui():
-
     st.markdown("<div class='login-card'>", unsafe_allow_html=True)
     st.markdown("<div class='login-title'>⚡ 로그인</div>", unsafe_allow_html=True)
 
-    # -------- LOGIN --------
     email = st.text_input("이메일")
     password = st.text_input("비밀번호", type="password")
 
+    # ---------------- 로그인 ----------------
     if st.button("로그인", use_container_width=True):
         res = login(email, password)
 
         if res is None or res.user is None:
             st.error("❌ 로그인 실패! 이메일/비밀번호를 확인하세요.")
-        else:
-            st.success("✔ 로그인 성공!")
-            st.session_state.user = res.user
-            st.experimental_rerun()
+            return
 
-    st.markdown("---")
+        st.success("✔ 로그인 성공!")
+        st.session_state.user = res.user
+        st.experimental_rerun()
+
+    st.markdown("----")
     st.subheader("회원가입")
 
-    # -------- SIGNUP --------
     email2 = st.text_input("가입 이메일")
     password2 = st.text_input("가입 비밀번호", type="password")
 
+    # ---------------- 회원가입 ----------------
     if st.button("회원가입", use_container_width=True):
         user, error = signup(email2, password2)
 
         if error:
             st.error(error)
         else:
-            st.success("🎉 가입 완료! 이메일 인증을 완료해주세요.")
+            st.success("🎉 가입 완료! 이메일 인증을 완료하세요.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -128,7 +140,7 @@ def login_ui():
 # --------------------------------------------------------------
 user = get_user()
 
-# 로그인 안 된 상태면 로그인 UI만 보여주고 종료
+# 로그인 안 된 상태면 로그인 UI 표시
 if not user:
     login_ui()
     st.stop()
@@ -138,6 +150,7 @@ if not user:
 # LOGGED-IN UI
 # -------------------------
 st.sidebar.success(f"로그인됨: {user.email}")
+
 if st.sidebar.button("로그아웃"):
     logout()
     st.experimental_rerun()
@@ -149,6 +162,7 @@ if st.sidebar.button("로그아웃"):
 st.title("⚡ 전기기사 공식 AI 설명 생성기")
 
 uploaded = st.file_uploader("📸 문제 이미지 업로드", type=["png", "jpg", "jpeg"])
+
 auto_problem = ""
 auto_formula = ""
 
@@ -157,6 +171,7 @@ if uploaded:
     buf = io.BytesIO()
     image.convert("RGB").save(buf, format="JPEG")
     auto_problem, auto_formula = analyze_image(buf.getvalue())
+
 
 st.divider()
 
@@ -169,6 +184,7 @@ with col1:
 
 with col2:
     st.info("문제를 입력하거나 이미지 업로드 후 '설명 생성하기'를 누르세요.")
+
 
 st.divider()
 
@@ -183,6 +199,7 @@ if st.button("📖 설명 생성하기", type="primary"):
         st.success("완료!")
         st.markdown(explanation)
 
+        # 히스토리 저장
         save_history(user.id, problem_text, formula_text, explanation)
 
         st.download_button(
