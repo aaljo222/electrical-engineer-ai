@@ -1,5 +1,8 @@
 import streamlit as st
-from auth_db import create_client, Client
+from supabase import create_client, Client   # ✔ 올바른 형태
+import json
+import datetime
+
 
 @st.cache_resource
 def get_supabase() -> Client:
