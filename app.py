@@ -26,11 +26,8 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 # ==========================
 # Claude Vision: 이미지 분석 함수
 # ==========================
+
 def analyze_image_with_claude(image_bytes):
-    """
-    Claude Vision으로 이미지 분석해서
-    문제/공식 텍스트만 추출
-    """
 
     prompt = """
 당신은 이미지 속 전기기사 시험 문제를 분석하여 아래 두 가지만 추출합니다.
@@ -46,23 +43,27 @@ def analyze_image_with_claude(image_bytes):
 }
 """
 
-    # ---- Base64 인코딩 중요 ----
+    # Base64 인코딩 (필수)
     img_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     try:
         message = client.messages.create(
-            model="claude-3-opus-vision",
+            model="claude-3-opus-vision",   # Vision 지원 모델
             max_tokens=1500,
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "input_text", "text": prompt},
                         {
-                            "type": "input_image",
-                            "image": {
-                                "data": img_b64,
-                                "type": "jpeg"   # png라도 jpeg로 변환했기 때문에 jpeg 유지
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": img_b64
                             }
                         }
                     ]
@@ -77,6 +78,8 @@ def analyze_image_with_claude(image_bytes):
 
     except Exception as e:
         return None, None, f"이미지 분석 오류: {e}"
+
+
 # ==========================
 # 해시
 # ==========================
