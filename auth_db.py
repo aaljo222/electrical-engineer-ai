@@ -14,16 +14,34 @@ supabase = get_supabase()
 
 # -------------- AUTH --------------
 def signup(email, password):
-    return supabase.auth.sign_up({"email": email, "password": password})
+    try:
+        result = supabase.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+        return result.user
+    except Exception:
+        return None
 
 def login(email, password):
-    return supabase.auth.sign_in_with_password({"email": email, "password": password})
+    try:
+        result = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        return result.user
+    except Exception:
+        return None
 
 def logout():
     supabase.auth.sign_out()
 
 def get_user():
-    return auth.get_user()
+    session = supabase.auth.get_session()
+    if session is None or session.user is None:
+        return None
+    return session.user
+
 
 # -------------- HISTORY DB --------------
 def save_history(user_id: str, problem_text: str, formula: str, explanation: str):
