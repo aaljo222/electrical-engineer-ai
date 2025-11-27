@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전기기사 공식 AI 설명 생성기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        main {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .form-group textarea,
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group textarea:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-section {
+            text-align: center;
+            padding: 2rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e2e8f0;
+            display: none;
+        }
+
+        .explanation-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 1rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .explanation-box h2 {
+            color: #2563eb;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation-box h2:first-child {
+            margin-top: 0;
+        }
+
+        .btn-secondary {
+            padding: 0.875rem 2rem;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            color: #2563eb;
+            margin-right: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .examples-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .example-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .example-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        .example-card h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .example-card p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            opacity: 0.8;
+        }
+
+        .cache-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ 전기기사 공식 AI 설명 생성기</h1>
+            <p class="subtitle">Claude AI로 공식을 쉽게 이해하세요</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <h2>📝 문제 입력</h2>
+                
+                <div class="form-group">
+                    <label for="problem">문제 내용</label>
+                    <textarea 
+                        id="problem" 
+                        placeholder="예시: 평행판 커패시터의 극판 사이에 유전체를 채웠을 때 정전용량의 변화를 구하시오."
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="formula">관련 공식</label>
+                    <input 
+                        type="text" 
+                        id="formula" 
+                        placeholder="예시: C = ε₀εᵣA/d"
+                    >
+                </div>
+
+                <button id="generateBtn" class="btn-primary">
+                    📖 설명 생성하기
+                </button>
+
+                <div id="loadingSection" class="loading-section">
+                    <div class="spinner"></div>
+                    <p>Claude가 설명 작성 중... (10-20초 소요)</p>
+                </div>
+            </div>
+
+            <div id="resultSection" class="result-section">
+                <h2>✨ 생성 결과</h2>
+                
+                <div id="cacheInfo" class="cache-badge" style="display: none;">
+                    ⚡ 캐시된 결과입니다
+                </div>
+
+                <div id="explanationBox" class="explanation-box"></div>
+
+                <div class="result-actions" style="margin-top: 1rem;">
+                    <button id="copyBtn" class="btn-secondary">
+                        📋 복사하기
+                    </button>
+                    <button id="newBtn" class="btn-secondary">
+                        ➕ 새로 만들기
+                    </button>
+                </div>
+            </div>
+
+            <div class="examples-section">
+                <h2>💡 예시 문제</h2>
+                <div class="examples-grid">
+                    <div class="example-card" data-problem="평행판 커패시터 사이에 유전율 εᵣ인 유전체를 채웠을 때, 정전용량이 어떻게 변하는가?" data-formula="C = ε₀εᵣA/d">
+                        <h3>커패시턴스 변화</h3>
+                        <p>유전체 삽입 시 정전용량</p>
+                    </div>
+                    <div class="example-card" data-problem="RLC 직렬 회로에서 공진 주파수를 구하시오." data-formula="f₀ = 1/(2π√LC)">
+                        <h3>공진 주파수</h3>
+                        <p>RLC 회로 공진 조건</p>
+                    </div>
+                    <div class="example-card" data-problem="임피던스 Z = R + jX에서 R과 X의 관계를 설명하시오." data-formula="|Z| = √(R² + X²)">
+                        <h3>임피던스</h3>
+                        <p>복소 임피던스 계산</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Made with ❤️ by 전기공학 강사 | Powered by Claude API & Vercel</p>
+        </footer>
+    </div>
+
+    <script>
+        const problemInput = document.getElementById('problem');
+        const formulaInput = document.getElementById('formula');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultSection = document.getElementById('resultSection');
+        const explanationBox = document.getElementById('explanationBox');
+        const cacheInfo = document.getElementById('cacheInfo');
+        const copyBtn = document.getElementById('copyBtn');
+        const newBtn = document.getElementById('newBtn');
+
+        async function generateExplanation() {
+            const problem = problemInput.value.trim();
+            const formula = formulaInput.value.trim();
+
+            if (!problem || !formula) {
+                alert('문제와 공식을 모두 입력해주세요.');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            loadingSection.style.display = 'block';
+            resultSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({problem, formula})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResult(data);
+                } else {
+                    alert('오류: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('서버 오류가 발생했습니다. 나중에 다시 시도해주세요.');
+            } finally {
+                generateBtn.disabled = false;
+                loadingSection.style.display = 'none';
+            }
+        }
+
+        function displayResult(data) {
+            let html = data.explanation
+                .replace(/## (.*)/g, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            explanationBox.innerHTML = html;
+            cacheInfo.style.display = data.cached ? 'inline-block' : 'none';
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        copyBtn.addEventListener('click', function() {
+            const text = explanationBox.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('클립보드에 복사되었습니다!');
+            });
+        });
+
+        newBtn.addEventListener('click', function() {
+            problemInput.value = '';
+            formulaInput.value = '';
+            resultSection.style.display = 'none';
+            problemInput.focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        generateBtn.addEventListener('click', generateExplanation);
+
+        formulaInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generateExplanation();
+            }
+        });
+
+        document.querySelectorAll('.example-card').forEach(card => {
+            card.addEventListener('click', function() {
+                problemInput.value = this.dataset.problem;
+                formulaInput.value = this.dataset.formula;
+                problemInput.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => generateBtn.focus(), 500);
+            });
+        });
+    </script>
+</body>
+</html>
