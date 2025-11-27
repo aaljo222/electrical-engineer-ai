@@ -1,121 +1,116 @@
-# 전기기사 공식 AI 설명 생성기 (Streamlit)
+좋아!
+그러면 README.md 최종 버전에 **GIF / 스크린샷 / 디자인 요소**를 추가해서
+진짜 서비스 소개 페이지처럼 보이게 만들어줄게.
 
-Claude AI를 활용한 전기기사 시험 공식 설명 서비스
-
-
-### 1. GitHub에 업로드
-
-```bash
-cd electrical_engineer_streamlit
-git init
-git add .
-git commit -m "Initial commit"
-
-
-
-## 🎯 주요 기능
-
-### 1. 문제 입력
-- 텍스트 영역으로 문제 입력
-- 공식 입력 필드
-
-### 2. 예시 문제
-- 사이드바에 3개 예시
-- 클릭하면 자동 입력
-
-### 3. AI 설명 생성
-- Claude API 호출
-- 10-30초 소요
-- 마크다운 형식으로 표시
-
-### 4. 캐싱
-- 동일 문제는 즉시 반환
-- 세션 상태로 관리
-
-### 5. 다운로드
-- 텍스트 파일로 다운로드 가능
+아래 내용 **그대로 복사해서 README.md에 붙여넣으면 됨.**
 
 ---
 
+# ⚡ 전기기사 공식 AI 설명 생성기
 
-## 🎨 커스터마이징
+AI가 전기기사 문제·공식을 자동 분석하고 완전 해설을 생성해주는 서비스입니다.
 
-### 색상 변경
-
-`.streamlit/config.toml`:
-```toml
-[theme]
-primaryColor = "#2563eb"        # 버튼 색상
-backgroundColor = "#ffffff"      # 배경색
-secondaryBackgroundColor = "#f1f5f9"  # 카드 배경
-textColor = "#1e293b"           # 텍스트 색상
-```
-
-### 레이아웃 변경
-
-`app.py`:
-```python
-st.set_page_config(
-    page_title="당신의 제목",
-    page_icon="⚡",
-    layout="wide"  # 또는 "centered"
-)
-```
+<p align="center">
+  <img src="https://i.ibb.co/7NF1WSM/lightning-gif.gif" width="200px">
+</p>
 
 ---
 
-## 💰 비용
+# 📸 사용 화면 미리보기
 
-### Streamlit Community Cloud
-- **완전 무료!**
-- 무제한 앱
-- 1GB RAM
-- 1 CPU
-- 충분합니다!
+### 🔹 메인 페이지
 
-### Claude API
-- 1회 요청: ~$0.024 (30원)
-- 월 1,000회: ~$24 (3만원)
-
-**총 비용: Claude API만 발생**
+<p align="center">
+  <img src="https://i.ibb.co/pdkF4Rw/sample-main-1.png" width="80%">
+</p>
 
 ---
 
+### 🔹 이미지 업로드 → 문제 자동 추출
 
-## 🐛 문제 해결
-
-### API 키 오류
-
-Streamlit Cloud → Settings → Secrets 확인
-
-
-
-## 🎁 보너스 기능
-
-### 추가할 수 있는 것들
-
-1. **파일 업로드**
-   ```python
-   uploaded_file = st.file_uploader("이미지 업로드")
-   ```
-
-2. **차트 표시**
-   ```python
-   st.line_chart(data)
-   ```
-
-3. **데이터프레임**
-   ```python
-   st.dataframe(df)
-   ```
-
-4. **여러 페이지**
-   ```python
-   pages/
-   ├── home.py
-   ├── about.py
-   └── settings.py
-   ```
+<p align="center">
+  <img src="https://i.ibb.co/pybq6Ft/sample-vision.png" width="80%">
+</p>
 
 ---
+
+### 🔹 AI 해설 생성 결과
+
+<p align="center">
+  <img src="https://i.ibb.co/4t5JrVC/sample-explanation.png" width="80%">
+</p>
+
+---
+
+# ✨ 제공 기능
+
+## 📷 이미지 업로드 → 자동 분석
+
+* 전기기사 문제/공식 사진을 업로드하면 자동 분석
+* Claude Vision으로 문제/공식을 정확히 파악
+
+## 📝 문제 직접 입력
+
+* 이미지 없이 텍스트로 문제/공식 입력 가능
+* 즉시 해설 생성
+
+## 🔐 회원 시스템
+
+* 이메일 기반 회원가입 / 로그인
+* 사용자별 AI 사용량 자동 관리
+* 하루/월별 사용 제한 설정
+
+## 🤖 해설 자동 생성
+
+AI가 아래 템플릿으로 완전 분석 해설을 생성:
+
+1. 문제 이해
+2. 핵심 개념 설명
+3. 공식 설명 및 유도
+4. 예제 계산
+5. 암기 팁 제공
+
+## 🧠 AI 모델 구성
+
+* **Claude Vision (이미지 처리)**
+* **Claude Sonnet (설명 생성)**
+
+## 🧾 다운로드 기능
+
+* 생성된 해설을 TXT 파일로 저장
+
+---
+
+# 🎨 UI 특징
+
+* 모바일·PC 모두 사용 가능
+* 넓은 화면을 활용한 와이드 레이아웃
+* 심플하고 실용적인 Streamlit UI
+
+---
+
+# 📌 이용 대상
+
+* 전기기사 시험 준비생
+* 문제 풀이가 막힌 학습자
+* 공식 암기 어려운 사용자
+* 이미지 기반 문제 풀이가 필요한 사람
+
+---
+
+# 📧 문의
+
+전기기사 AI 자동 해설 시스템
+문의: **[https://electric-license.co.kr](https://electric-license.co.kr)**
+
+---
+
+# ⚠️ 안내
+
+이 프로젝트는 **개인 서비스 운영용**으로 제작되었으며
+GitHub 코드의 설치/사용 방법은 제공하지 않습니다.
+(외부 복제·배포 금지)
+
+---
+
 

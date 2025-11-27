@@ -3,252 +3,270 @@ import anthropic
 import hashlib
 import os
 import re
-from PIL import Image
-import io
 import base64
+import io
+from PIL import Image
+from supabase import create_client, Client
+from datetime import datetime, timedelta
 
-# ==========================
-# 페이지 설정
-# ==========================
-st.set_page_config(
-    page_title="전기기사 공식 AI 설명 생성기",
-    page_icon="⚡",
-    layout="wide"
-)
+# ===========================================
+# 기본 설정
+# ===========================================
+st.set_page_config(page_title="전기기사 공식 AI", page_icon="⚡", layout="wide")
 
-# ==========================
-# API
-# ==========================
+# -------------------------------------------
+# Supabase 설정
+# -------------------------------------------
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")  # 반드시 anon key
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+
+# ===========================================
+# 로그인 UI
+# ===========================================
+def login_ui():
+    st.subheader("🔐 로그인")
+
+    email = st.text_input("이메일")
+    password = st.text_input("비밀번호", type="password")
+
+    if st.button("로그인"):
+        try:
+            data = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            st.session_state.user = data.user
+            st.success("로그인 성공!")
+            st.experimental_rerun()
+        except Exception as e:
+            st.error("로그인 실패: 이메일 또는 비밀번호 확인")
+
+
+def signup_ui():
+    st.subheader("📝 회원가입")
+
+    email = st.text_input("이메일")
+    password = st.text_input("비밀번호", type="password")
+
+    if st.button("회원가입"):
+        try:
+            supabase.auth.sign_up({"email": email, "password": password})
+            st.success("회원가입 성공! 이메일을 확인하세요.")
+        except Exception as e:
+            st.error(f"회원가입 실패: {e}")
+
+
+# ===========================================
+# 회원 정보 / 사용량 처리
+# ===========================================
+MAX_DAILY = 5  # 하루 사용 제한
+
+def get_usage(user_id):
+    res = supabase.table("usage").select("*").eq("user_id", user_id).execute()
+
+    if len(res.data) == 0:
+        # 신규 유저 → 레코드 생성
+        supabase.table("usage").insert({
+            "user_id": user_id,
+            "count": 0,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        return 0
+
+    record = res.data[0]
+
+    # 날짜 변경되면 초기화
+    last = datetime.fromisoformat(record["updated_at"])
+    if (datetime.now() - last).days >= 1:
+        supabase.table("usage").update({"count": 0, "updated_at": datetime.now().isoformat()}).eq("user_id", user_id).execute()
+        return 0
+
+    return record["count"]
+
+
+def increment_usage(user_id):
+    supabase.table("usage").update({
+        "count": supabase.table("usage").select("count").eq("user_id", user_id).execute().data[0]["count"] + 1,
+        "updated_at": datetime.now().isoformat()
+    }).eq("user_id", user_id).execute()
+
+
+# ===========================================
+# Claude API 설정
+# ===========================================
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-# ==========================
-# Claude Vision: 이미지 분석 함수
-# ==========================
-
+# ===========================================
+# Claude Vision - 이미지 분석
+# ===========================================
 def analyze_image_with_claude(image_bytes):
-
     prompt = """
-당신은 이미지 속 전기기사 시험 문제를 분석하여 아래 두 가지만 추출합니다.
-
-1) 문제 내용
-2) 공식
-
-출력 형식은 반드시 아래 JSON 형식으로만 출력하세요:
-
-{
- "problem": "...",
- "formula": "..."
-}
+문제 이미지에서 다음 두 가지를 JSON 형식으로 출력:
+1) problem
+2) formula
 """
 
-    # Base64 인코딩 (필수)
     img_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     try:
         message = client.messages.create(
             model="claude-3-haiku-20240307",
             max_tokens=1500,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": img_b64
-                            }
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": img_b64
                         }
-                    ]
-                }
-            ]
+                    }
+                ]
+            }]
         )
 
         import json
         result = json.loads(message.content[0].text)
-
         return result.get("problem", ""), result.get("formula", ""), None
 
     except Exception as e:
-        return None, None, f"이미지 분석 오류: {e}"
+        return None, None, str(e)
 
 
-# ==========================
-# 해시
-# ==========================
-def generate_hash(problem_text, formula):
-    return hashlib.md5(f"{problem_text}||{formula}".encode()).hexdigest()
-
-
-# ==========================
-# 문제 설명 생성
-# ==========================
+# ===========================================
+# 설명 생성
+# ===========================================
 def generate_explanation(problem_text, formula):
-    if not ANTHROPIC_API_KEY:
-        return None, "API 키가 없습니다."
-
     prompt = f"""
-전기기사 시험 문제를 쉽게 설명해주세요.
+전기기사 문제를 초보자도 이해할 수 있게 설명하시오.
 
 문제: {problem_text}
 공식: {formula}
 
-다음 항목으로 설명하세요:
-1. 문제 이해
-2. 필요한 개념
-3. 공식 유도
-4. 예제 풀이
-5. 암기 팁
+1. 문제 해석  
+2. 공식의 의미  
+3. 풀이 과정  
+4. 핵심 개념  
+5. 암기 팁  
 """
 
     try:
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1800,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
         return message.content[0].text, None
     except Exception as e:
         return None, str(e)
 
 
+# ===========================================
+# UI 렌더링
+# ===========================================
 
-
-# ==========================
-# UI 시작
-# ==========================
 st.title("⚡ 전기기사 공식 AI 설명 생성기")
-st.markdown("**Claude Vision + Sonnet으로 문제/공식을 자동 분석하고 해설을 생성합니다.**")
-st.divider()
+
+# ----------------------------
+# 로그인 안 한 경우 로그인 화면 표시
+# ----------------------------
+if not st.session_state.user:
+    tab1, tab2 = st.tabs(["로그인", "회원가입"])
+    with tab1:
+        login_ui()
+    with tab2:
+        signup_ui()
+    st.stop()
 
 
-# ============================================================
-# 📷 이미지 업로드 (UI 상단, 기존 UI 변경 없음)
-# ============================================================
-uploaded_file = st.file_uploader("📸 문제/공식 이미지 업로드", type=["jpg", "jpeg", "png"])
+# ===========================================
+# 로그인 사용자 정보 표시
+# ===========================================
+user = st.session_state.user
+usage_count = get_usage(user.id)
+
+st.info(f"👤 {user.email} 님 | 오늘 사용량: **{usage_count}/{MAX_DAILY} 회**")
+
+if usage_count >= MAX_DAILY:
+    st.error("⚠️ 오늘 사용량 제한에 도달했습니다. 내일 다시 이용해주세요!")
+    st.stop()
+
+
+# ===========================================
+# 이미지 업로드
+# ===========================================
+uploaded_file = st.file_uploader("📸 문제 이미지 업로드", type=["jpg", "jpeg", "png"])
 
 auto_problem = ""
 auto_formula = ""
 
 if uploaded_file:
-    st.info("이미지 분석 중... (Claude Vision 처리)")
-
-    # 이미지 열기
+    st.info("이미지 분석 중...")
     image = Image.open(uploaded_file)
 
-    # PNG → RGB 변환
     if image.mode != "RGB":
         image = image.convert("RGB")
 
-    # 이미지 → JPEG 바이트 변환
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG")
-    img_bytes = buffer.getvalue()
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG")
+    img_bytes = buf.getvalue()
 
-    # Vision 분석
-    problem, formula, error = analyze_image_with_claude(img_bytes)
+    problem, formula, err = analyze_image_with_claude(img_bytes)
 
-    if error:
-        st.error(error)
+    if err:
+        st.error("이미지 분석 오류: " + err)
     else:
-        st.success("사진 분석 성공!")
         auto_problem = problem
         auto_formula = formula
 
-        st.markdown("### 📘 추출된 문제")
+        st.success("이미지 분석 성공!")
+        st.write("### 📘 문제")
         st.write(problem)
-
-        st.markdown("### 📐 추출된 공식")
+        st.write("### 📐 공식")
         st.write(formula)
 
 
+# ===========================================
+# 기존 문제 입력 필드
+# ===========================================
 st.divider()
+problem_text = st.text_area("문제", value=auto_problem, height=150)
+formula = st.text_input("공식", value=auto_formula)
 
 
-# ============================================================
-# 📌 기존 사이드바 UI 그대로 복구
-# ============================================================
-with st.sidebar:
-    st.header("💡 예시 문제")
-
-    examples = {
-        "커패시턴스 변화": {
-            "problem": "평행판 커패시터 사이에 유전율 εᵣ인 유전체를 채웠을 때, 정전용량이 어떻게 변하는가?",
-            "formula": "C = ε₀εᵣA/d"
-        },
-        "공진 주파수": {
-            "problem": "RLC 직렬 회로에서 공진 주파수를 구하시오.",
-            "formula": "f₀ = 1/(2π√LC)"
-        },
-        "임피던스": {
-            "problem": "임피던스 Z = R + jX에서 R과 X의 관계를 설명하시오.",
-            "formula": "|Z| = √(R² + X²)"
-        }
-    }
-
-    for title, content in examples.items():
-        if st.button(title, use_container_width=True):
-            st.session_state.selected_problem = content["problem"]
-            st.session_state.selected_formula = content["formula"]
-
-    st.divider()
-    st.markdown("Made with ❤️")
-
-
-# ============================================================
-# 문제 입력 UI (그대로 유지)
-# ============================================================
-default_problem = st.session_state.get("selected_problem", auto_problem)
-default_formula = st.session_state.get("selected_formula", auto_formula)
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("📝 문제 입력")
-    problem_text = st.text_area("문제 내용", value=default_problem, height=150)
-    formula = st.text_input("관련 공식", value=default_formula)
-
-with col2:
-    st.subheader("ℹ️ 사용 방법")
-    st.info("""
-1. 문제/공식 사진을 업로드하면 자동 입력됩니다.
-2. 또는 왼쪽 예시를 클릭하세요.
-3. 문제/공식을 입력한 뒤 '설명 생성하기'를 누르세요.
-""")
-
-
-st.divider()
-
-
-# ============================================================
+# ===========================================
 # 설명 생성 버튼
-# ============================================================
-if st.button("📖 설명 생성하기", type="primary", use_container_width=True):
+# ===========================================
+if st.button("📖 설명 생성하기", type="primary"):
 
     if not problem_text or not formula:
-        st.error("⚠️ 문제/공식을 입력하거나 사진을 업로드하세요.")
+        st.error("⚠️ 문제와 공식을 입력하세요.")
     else:
-        with st.spinner("Claude가 설명을 생성하고 있습니다... ⏳"):
-            explanation, error = generate_explanation(problem_text, formula)
+        with st.spinner("설명 생성 중..."):
+            explanation, err = generate_explanation(problem_text, formula)
 
-        if error:
-            st.error(error)
+        if err:
+            st.error(err)
         else:
-            st.success("✨ 설명 생성 완료!")
+            st.success("✨ 생성 완료!")
 
-            st.markdown("### ✨ 생성 결과")
+            # 사용량 증가
+            increment_usage(user.id)
+
+            st.markdown("### 📝 설명 결과")
             st.markdown(explanation)
 
+
             st.download_button(
-                label="📋 텍스트 다운로드",
-                data=explanation,
-                file_name="전기기사_공식_설명.txt",
+                "📄 다운로드",
+                explanation,
+                file_name="electric_engineer_explanation.txt",
                 mime="text/plain"
             )
