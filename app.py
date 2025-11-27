@@ -98,11 +98,17 @@ def login_ui():
 
     if st.button("로그인", use_container_width=True):
         res = login(email, password)
-        if res.user:
-            st.success("로그인 성공!")
-            st.experimental_rerun()
-        else:
-            st.error("로그인 실패")
+
+        # 로그인 실패 처리
+        if res is None or res.user is None:
+            st.error("❌ 로그인 실패! 이메일 또는 비밀번호를 확인하세요.")
+            return
+
+        # 로그인 성공 처리
+        st.success("✔ 로그인 성공!")
+        st.session_state.user = res.user   # 세션에 저장
+        st.experimental_rerun()
+
 
     st.markdown("----")
     st.subheader("회원가입")
