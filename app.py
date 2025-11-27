@@ -145,10 +145,17 @@ if uploaded_file:
     st.info("이미지 분석 중... (Claude Vision 처리)")
     
     # 이미지 → bytes 변환
-    image = Image.open(uploaded_file)
+    # 이미지 → bytes 변환
+image = Image.open(uploaded_file)
+
+# 🔥 여기 추가 — PNG의 RGBA 대비
+if image.mode != "RGB":
+    image = image.convert("RGB")
+
     img_bytes = io.BytesIO()
     image.save(img_bytes, format='JPEG')
     img_bytes = img_bytes.getvalue()
+
 
     # Claude Vision OCR 호출
     problem, formula, error = analyze_image_with_claude(img_bytes)
