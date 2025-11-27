@@ -4,10 +4,30 @@ import json
 import datetime
 
 
+import os
+import streamlit as st
+from supabase import create_client, Client
+
 @st.cache_resource
 def get_supabase() -> Client:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
+    # 1) Render/Production 환경 변수 우선
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
+
+    # 2) 로컬 개발(Streamlit secrets) 지원
+    if not url:
+        url = st.secrets.get("SUPABASE_URL", None)
+    if not key:
+        key = st.secrets.get("SUPABASE_KEY", None)
+
+    # 3) 그래도 없으면 명확한 에러
+    if not url or not key:
+        raise ValueError(
+            "❗ SUPABASE_URL 또는 SUPABASE_KEY가 설정되지 않았습니다.\n"
+            "Render에서는 환경변수로 추가하고,\n"
+            "로컬에서는 .streamlit/secrets.toml을 사용하세요."
+        )
+
     return create_client(url, key)
 
 supabase = get_supabase()
