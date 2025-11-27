@@ -1,29 +1,31 @@
 import streamlit as st
-from auth_db import get_user, load_history
+from auth_db import get_user, get_history
 
+st.title("📝 내 학습 기록")
 
-st.set_page_config(page_title="History")
+# 로그인 확인
 user = get_user()
-
-st.title("📜 내 학습 기록")
-
 if not user:
-    st.error("로그인 후 이용 가능합니다.")
+    st.error("로그인이 필요합니다.")
     st.stop()
 
-hist = load_history(user.user.id).data
+# 히스토리 불러오기
+history = get_history(user.id)   # ← .data 절대 붙이지 말 것
 
-for item in hist:
-    st.markdown(
-        f"""
-        <div class='history-card'>
-            <h4>{item['problem'][:40]}...</h4>
-            <p><b>공식:</b> {item['formula']}</p>
-            <details>
-            <summary>결과 보기</summary>
-            <p>{item['result']}</p>
-            </details>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+if not history:
+    st.info("아직 저장된 학습 기록이 없습니다.")
+    st.stop()
+
+# 히스토리 표시
+for item in history:
+    with st.expander(f"📘 {item['problem'][:30]}..."):
+        st.write("### 📌 문제")
+        st.write(item["problem"])
+
+        st.write("### 🧮 공식")
+        st.write(item["formula"])
+
+        st.write("### 📖 설명")
+        st.write(item["result"])
+
+        st.write("—")
