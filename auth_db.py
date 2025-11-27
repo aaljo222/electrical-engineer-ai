@@ -75,20 +75,18 @@ def get_user():
 # -------------------------
 # HISTORY
 # -------------------------
-def save_history(user_id: str, problem_text: str, formula: str, explanation: str):
+def save_history(user_id: str, problem_id: str):
     data = {
         "user_id": user_id,
-        "problem_text": problem_text,
-        "formula": formula,
-        "explanation": explanation,
+        "problem_id": problem_id,
         "created_at": datetime.datetime.utcnow().isoformat()
     }
 
-    supabase.table("user_history").insert(data).execute()
+    supabase.table("history").insert(data).execute()
 
 
 def get_history(user_id):
-    res = supabase.table("user_history") \
+    res = supabase.table("history") \
         .select("*") \
         .eq("user_id", user_id) \
         .order("created_at", desc=True) \
