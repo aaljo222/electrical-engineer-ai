@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from datetime import datetime
 import anthropic
 import os
 import hashlib
@@ -9,8 +10,7 @@ app = Flask(__name__)
 # API 키 (Vercel 환경변수에서 가져옴)
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
-# 간단한 인메모리 캐시 (Vercel에서는 파일 저장 안됨)
-# 실제로는 Redis/Vercel KV 사용 권장
+# 간단한 인메모리 캐시
 cache = {}
 
 def generate_hash(problem_text, formula):
@@ -53,7 +53,7 @@ def generate_explanation(problem_text, formula):
     try:
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2000,
+            max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
         )
         
@@ -66,52 +66,58 @@ def generate_explanation(problem_text, formula):
 @app.route('/api/generate', methods=['POST'])
 def generate():
     """설명 생성 API"""
-    data = request.get_json()
-    problem_text = data.get('problem', '')
-    formula = data.get('formula', '')
-    
-    if not problem_text or not formula:
-        return jsonify({
-            'success': False,
-            'error': '문제와 공식을 모두 입력해주세요.'
-        }), 400
-    
-    # 해시 생성
-    content_hash = generate_hash(problem_text, formula)
-    
-    # 캐시 확인 (인메모리)
-    if content_hash in cache:
+    try:
+        data = request.get_json()
+        problem_text = data.get('problem', '')
+        formula = data.get('formula', '')
+        
+        if not problem_text or not formula:
+            return jsonify({
+                'success': False,
+                'error': '문제와 공식을 모두 입력해주세요.'
+            }), 400
+        
+        # 해시 생성
+        content_hash = generate_hash(problem_text, formula)
+        
+        # 캐시 확인
+        if content_hash in cache:
+            return jsonify({
+                'success': True,
+                'cached': True,
+                'explanation': cache[content_hash]['explanation'],
+                'created_at': cache[content_hash]['created_at']
+            })
+        
+        # 설명 생성
+        explanation = generate_explanation(problem_text, formula)
+        
+        if not explanation:
+            return jsonify({
+                'success': False,
+                'error': 'API 키가 설정되지 않았거나 생성에 실패했습니다.'
+            }), 500
+        
+        # 캐시 저장
+        cache[content_hash] = {
+            'problem': problem_text,
+            'formula': formula,
+            'explanation': explanation,
+            'created_at': datetime.now().isoformat()
+        }
+        
         return jsonify({
             'success': True,
-            'cached': True,
-            'explanation': cache[content_hash]['explanation'],
-            'created_at': cache[content_hash]['created_at']
+            'cached': False,
+            'explanation': explanation,
+            'created_at': datetime.now().isoformat()
         })
-    
-    # 설명 생성
-    explanation = generate_explanation(problem_text, formula)
-    
-    if not explanation:
+    except Exception as e:
+        print(f"Error: {e}")
         return jsonify({
             'success': False,
-            'error': 'API 키가 설정되지 않았거나 생성에 실패했습니다.'
+            'error': str(e)
         }), 500
-    
-    # 캐시 저장 (이 인스턴스에서만 유효)
-    from datetime import datetime
-    cache[content_hash] = {
-        'problem': problem_text,
-        'formula': formula,
-        'explanation': explanation,
-        'created_at': datetime.now().isoformat()
-    }
-    
-    return jsonify({
-        'success': True,
-        'cached': False,
-        'explanation': explanation,
-        'created_at': datetime.now().isoformat()
-    })
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -122,6 +128,12 @@ def health():
         'api_key_set': bool(ANTHROPIC_API_KEY)
     })
 
-# Vercel용 핸들러
-def handler(event, context):
-    return app(event, context)
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    """정적 파일 서빙"""
+    return app.send_static_file('index.html')
+
+# Vercel용 핸들러 - 이게 핵심!
+def handler(environ, start_response):
+    return app(environ, start_response)
