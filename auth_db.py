@@ -14,14 +14,21 @@ supabase = get_supabase()
 
 # -------------- AUTH --------------
 def signup(email, password):
-    try:
-        result = supabase.auth.sign_up({
-            "email": email,
-            "password": password
-        })
-        return result.user
-    except Exception:
-        return None
+    # 빈값 체크
+    if not email or not password:
+        return None, "❌ 이메일과 비밀번호를 입력하세요."
+
+    res = supabase.auth.sign_up({
+        "email": email,
+        "password": password
+    })
+
+    # Supabase 에러 체크
+    if res is None or res.user is None:
+        return None, "❌ 회원가입 실패: 이미 존재하는 이메일이거나 유효하지 않습니다."
+
+    return res.user, None
+
 
 def login(email, password):
     try:
