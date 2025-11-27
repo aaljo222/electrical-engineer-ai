@@ -7,7 +7,7 @@ import json
 app = Flask(__name__)
 
 # API 키 (Vercel 환경변수에서 가져옴)
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY_PROD', '')
 
 # 간단한 인메모리 캐시 (Vercel에서는 파일 저장 안됨)
 # 실제로는 Redis/Vercel KV 사용 권장
