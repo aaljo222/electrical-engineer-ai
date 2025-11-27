@@ -5,7 +5,7 @@ import os
 import re
 from PIL import Image
 import io
-
+import base64
 
 # ==========================
 # 페이지 설정
@@ -27,6 +27,11 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 # Claude Vision: 이미지 분석 함수
 # ==========================
 def analyze_image_with_claude(image_bytes):
+    """
+    Claude Vision으로 이미지 분석해서
+    문제/공식 텍스트만 추출
+    """
+
     prompt = """
 당신은 이미지 속 전기기사 시험 문제를 분석하여 아래 두 가지만 추출합니다.
 
@@ -41,10 +46,13 @@ def analyze_image_with_claude(image_bytes):
 }
 """
 
+    # ---- Base64 인코딩 중요 ----
+    img_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
     try:
         message = client.messages.create(
             model="claude-3-opus-vision",
-            max_tokens=1200,
+            max_tokens=1500,
             messages=[
                 {
                     "role": "user",
@@ -52,8 +60,10 @@ def analyze_image_with_claude(image_bytes):
                         {"type": "input_text", "text": prompt},
                         {
                             "type": "input_image",
-                            "image": image_bytes,
-                            "media_type": "image/jpeg"
+                            "image": {
+                                "data": img_b64,
+                                "type": "jpeg"   # png라도 jpeg로 변환했기 때문에 jpeg 유지
+                            }
                         }
                     ]
                 }
@@ -67,8 +77,6 @@ def analyze_image_with_claude(image_bytes):
 
     except Exception as e:
         return None, None, f"이미지 분석 오류: {e}"
-
-
 # ==========================
 # 해시
 # ==========================
@@ -132,29 +140,31 @@ if uploaded_file:
     # 이미지 열기
     image = Image.open(uploaded_file)
 
-    # RGBA → RGB 변환
+    # PNG → RGB 변환
     if image.mode != "RGB":
         image = image.convert("RGB")
 
-    # JPEG 바이트 변환
-    img_bytes = io.BytesIO()
-    image.save(img_bytes, format="JPEG")
-    img_bytes = img_bytes.getvalue()
+    # 이미지 → JPEG 바이트 변환
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG")
+    img_bytes = buffer.getvalue()
 
-    # Claude Vision OCR 호출
+    # Vision 분석
     problem, formula, error = analyze_image_with_claude(img_bytes)
 
     if error:
         st.error(error)
     else:
+        st.success("사진 분석 성공!")
         auto_problem = problem
         auto_formula = formula
 
-        st.success("사진 분석 성공! 아래 입력칸에 자동 적용됩니다.")
         st.markdown("### 📘 추출된 문제")
         st.write(problem)
+
         st.markdown("### 📐 추출된 공식")
         st.write(formula)
+
 
 st.divider()
 
