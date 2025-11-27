@@ -26,13 +26,24 @@ def get_user():
     return auth.get_user()
 
 # -------------- HISTORY DB --------------
-def save_history(user_id, problem, formula, result):
-    return supabase.table("history").insert({
+def save_history(user_id: str, problem_text: str, formula: str, explanation: str):
+    data = {
         "user_id": user_id,
-        "problem": problem,
+        "problem": problem_text,
         "formula": formula,
-        "result": result
-    }).execute()
+        "explanation": explanation,
+        "created_at": datetime.datetime.utcnow().isoformat()
+    }
+    supabase.table("history").insert(data).execute()
+
+
+def get_history(user_id: str):
+    result = supabase.table("history") \
+        .select("*") \
+        .eq("user_id", user_id) \
+        .order("created_at", desc=True) \
+        .execute()
+    return result.data
 
 def load_history(user_id):
     return supabase.table("history").select("*").eq("user_id", user_id).order("id", desc=True).execute()
