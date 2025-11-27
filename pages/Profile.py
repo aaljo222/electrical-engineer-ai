@@ -1,14 +1,20 @@
 import streamlit as st
-from auth_db import get_user, load_history
+from auth_db import get_user
 
 st.title("⚡ My Profile")
 
 user = get_user()
-if not user:
-    st.error("로그인 필요")
-else:
-    st.write("### 이메일")
-    st.write(user.user.email)
 
-    st.write("### User ID")
-    st.write(user.user.id)
+if not user:
+    st.error("로그인이 필요합니다.")
+    st.stop()
+
+st.subheader("✉️ 이메일")
+st.write(user.email)
+
+st.subheader("🆔 User ID")
+st.write(user.id)
+
+if hasattr(user, "created_at"):
+    st.subheader("📅 가입일")
+    st.write(user.created_at)
