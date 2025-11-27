@@ -50,15 +50,41 @@ def signup(email, password):
     return res.user, None
 
 
-def login(email, password):
-    try:
-        result = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        return result.user
-    except Exception:
-        return None
+def login_ui():
+    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='login-title'>⚡ 로그인</div>", unsafe_allow_html=True)
+
+    email = st.text_input("이메일")
+    password = st.text_input("비밀번호", type="password")
+
+    # 로그인 버튼
+    if st.button("로그인", use_container_width=True):
+        user_obj = login(email, password)
+
+        if user_obj is None:
+            st.error("❌ 로그인 실패! 이메일/비밀번호를 확인하세요.")
+            return
+
+        st.success("✔ 로그인 성공!")
+        st.session_state.user = user_obj
+        st.experimental_rerun()
+
+    st.markdown("----")
+    st.subheader("회원가입")
+
+    email2 = st.text_input("가입 이메일")
+    password2 = st.text_input("가입 비밀번호", type="password")
+
+    if st.button("회원가입", use_container_width=True):
+        user, error = signup(email2, password2)
+
+        if error:
+            st.error(error)
+        else:
+            st.success("🎉 가입 완료! 이메일 인증을 완료하세요.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 def logout():
     supabase.auth.sign_out()
