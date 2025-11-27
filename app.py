@@ -137,7 +137,12 @@ def login_ui():
 # --------------------------------------------------------------
 # MAIN APPLICATION LOGIC
 # --------------------------------------------------------------
-user = get_user()
+user = st.session_state.get("user", None)
+
+# 로그인 안 된 상태면 로그인 UI 표시
+if not user:
+    login_ui()
+    st.stop()
 
 # 로그인 안 된 상태면 로그인 UI 표시
 if not user:
