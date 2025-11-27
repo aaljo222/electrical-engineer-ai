@@ -4,7 +4,8 @@ import hashlib
 import base64
 import io
 from PIL import Image
-from auth_db import supabase, login, signup, get_user, logout, save_history
+from auth_db import login, signup, get_user, logout, save_history, get_history
+
 
 
 # -------------------------

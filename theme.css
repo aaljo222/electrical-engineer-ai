@@ -1,0 +1,39 @@
+/* 메인 테마 색상 */
+:root {
+  --primary: #2563EB;
+  --secondary: #F8FAFC;
+  --accent: #FACC15;
+  --text: #1E293B;
+}
+
+/* 로그인 카드 */
+.login-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  width: 380px;
+  margin: auto;
+  text-align: center;
+}
+
+.login-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.button-primary {
+  background: var(--primary) !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.history-card {
+  padding: 1.2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+}
