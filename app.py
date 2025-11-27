@@ -1,25 +1,32 @@
-from flask import Flask, render_template_string, request, jsonify
+import streamlit as st
 import anthropic
 import os
 import hashlib
-import json
-from datetime import datetime
 
-app = Flask(__name__)
+# 페이지 설정
+st.set_page_config(
+    page_title="전기기사 공식 AI 설명 생성기",
+    page_icon="⚡",
+    layout="wide"
+)
 
-# API 키
+# API 키 설정
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
-# 캐시
-cache = {}
+# 세션 상태 초기화 (캐시)
+if 'cache' not in st.session_state:
+    st.session_state.cache = {}
 
 def generate_hash(problem_text, formula):
+    """해시 생성"""
     content = f"{problem_text}||{formula}"
     return hashlib.md5(content.encode()).hexdigest()
 
 def generate_explanation(problem_text, formula):
+    """Claude API로 설명 생성"""
+    
     if not ANTHROPIC_API_KEY:
-        return None
+        return None, "API 키가 설정되지 않았습니다. Streamlit Secrets에 ANTHROPIC_API_KEY를 추가해주세요."
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     
@@ -51,192 +58,135 @@ def generate_explanation(problem_text, formula):
     try:
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1500,
+            max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
-        return message.content[0].text
+        return message.content[0].text, None
     except Exception as e:
-        print(f"Claude API 오류: {e}")
-        return None
+        return None, f"오류 발생: {str(e)}"
 
-# HTML 템플릿 (인라인)
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전기기사 공식 AI 설명 생성기</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #1e293b;
-            padding: 2rem;
+# 헤더
+st.title("⚡ 전기기사 공식 AI 설명 생성기")
+st.markdown("**Claude AI로 공식을 쉽게 이해하세요**")
+st.divider()
+
+# 사이드바 - 예시 문제
+with st.sidebar:
+    st.header("💡 예시 문제")
+    
+    examples = {
+        "커패시턴스 변화": {
+            "problem": "평행판 커패시터 사이에 유전율 εᵣ인 유전체를 채웠을 때, 정전용량이 어떻게 변하는가?",
+            "formula": "C = ε₀εᵣA/d"
+        },
+        "공진 주파수": {
+            "problem": "RLC 직렬 회로에서 공진 주파수를 구하시오.",
+            "formula": "f₀ = 1/(2π√LC)"
+        },
+        "임피던스": {
+            "problem": "임피던스 Z = R + jX에서 R과 X의 관계를 설명하시오.",
+            "formula": "|Z| = √(R² + X²)"
         }
-        .container { max-width: 1200px; margin: 0 auto; }
-        header { text-align: center; color: white; margin-bottom: 3rem; }
-        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        main { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 1.5rem; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
-        textarea, input { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; font-family: inherit; }
-        textarea { min-height: 120px; resize: vertical; }
-        textarea:focus, input:focus { outline: none; border-color: #2563eb; }
-        .btn-primary { width: 100%; padding: 1rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; transition: all 0.3s; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); }
-        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-        .loading { display: none; text-align: center; padding: 2rem; background: #f1f5f9; border-radius: 8px; margin-top: 1rem; }
-        .spinner { border: 4px solid #f3f4f6; border-top: 4px solid #2563eb; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .result { display: none; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #e2e8f0; }
-        .explanation-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2rem; line-height: 1.8; white-space: pre-wrap; }
-        .explanation-box h2 { color: #2563eb; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-        .explanation-box h2:first-child { margin-top: 0; }
-        footer { text-align: center; color: white; margin-top: 2rem; opacity: 0.8; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>⚡ 전기기사 공식 AI 설명 생성기</h1>
-            <p>Claude AI로 공식을 쉽게 이해하세요</p>
-        </header>
-        <main>
-            <div class="form-group">
-                <label for="problem">문제 내용</label>
-                <textarea id="problem" placeholder="예시: 평행판 커패시터의 극판 사이에 유전체를 채웠을 때 정전용량의 변화를 구하시오."></textarea>
-            </div>
-            <div class="form-group">
-                <label for="formula">관련 공식</label>
-                <input type="text" id="formula" placeholder="예시: C = ε₀εᵣA/d">
-            </div>
-            <button id="generateBtn" class="btn-primary">📖 설명 생성하기</button>
-            <div id="loading" class="loading">
-                <div class="spinner"></div>
-                <p>Claude가 설명 작성 중... (15-30초 소요)</p>
-            </div>
-            <div id="result" class="result">
-                <h2>✨ 생성 결과</h2>
-                <div id="explanation" class="explanation-box"></div>
-            </div>
-        </main>
-        <footer>
-            <p>Made with ❤️ by 전기공학 강사 | Powered by Claude API & Railway</p>
-        </footer>
-    </div>
-    <script>
-        const problemInput = document.getElementById('problem');
-        const formulaInput = document.getElementById('formula');
-        const generateBtn = document.getElementById('generateBtn');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        const explanation = document.getElementById('explanation');
+    }
+    
+    for title, content in examples.items():
+        if st.button(title, use_container_width=True):
+            st.session_state.selected_problem = content["problem"]
+            st.session_state.selected_formula = content["formula"]
+    
+    st.divider()
+    st.markdown("### 📊 통계")
+    st.metric("생성된 설명", len(st.session_state.cache))
+    
+    st.divider()
+    st.markdown("**Made with ❤️**")
+    st.markdown("Claude API & Streamlit")
 
-        generateBtn.addEventListener('click', async () => {
-            const problem = problemInput.value.trim();
-            const formula = formulaInput.value.trim();
+# 메인 영역
+col1, col2 = st.columns([2, 1])
 
-            if (!problem || !formula) {
-                alert('문제와 공식을 모두 입력해주세요.');
-                return;
-            }
+with col1:
+    st.subheader("📝 문제 입력")
+    
+    # 예시 선택 시 자동 입력
+    default_problem = st.session_state.get('selected_problem', '')
+    default_formula = st.session_state.get('selected_formula', '')
+    
+    problem_text = st.text_area(
+        "문제 내용",
+        value=default_problem,
+        height=150,
+        placeholder="예시: 평행판 커패시터의 극판 사이에 유전체를 채웠을 때 정전용량의 변화를 구하시오."
+    )
+    
+    formula = st.text_input(
+        "관련 공식",
+        value=default_formula,
+        placeholder="예시: C = ε₀εᵣA/d"
+    )
 
-            generateBtn.disabled = true;
-            loading.style.display = 'block';
-            result.style.display = 'none';
+with col2:
+    st.subheader("ℹ️ 사용 방법")
+    st.info("""
+    1. 문제와 공식을 입력하세요
+    2. 또는 왼쪽 예시를 클릭하세요
+    3. "설명 생성" 버튼을 누르세요
+    4. 10-20초 후 설명이 나타납니다
+    """)
+    
+    if ANTHROPIC_API_KEY:
+        st.success("✅ API 키 설정됨")
+    else:
+        st.error("❌ API 키가 필요합니다")
 
-            try {
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({problem, formula})
-                });
+st.divider()
 
-                const data = await response.json();
-
-                if (data.success) {
-                    let html = data.explanation
-                        .replace(/## (.*)/g, '<h2>$1</h2>')
-                        .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');
-                    explanation.innerHTML = html;
-                    result.style.display = 'block';
-                    result.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    alert('오류: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('서버 오류가 발생했습니다.');
-            } finally {
-                generateBtn.disabled = false;
-                loading.style.display = 'none';
-            }
-        });
-
-        formulaInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                generateBtn.click();
-            }
-        });
-    </script>
-</body>
-</html>
-'''
-
-@app.route('/')
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-@app.route('/api/generate', methods=['POST'])
-def generate():
-    try:
-        data = request.get_json()
-        problem_text = data.get('problem', '')
-        formula = data.get('formula', '')
-        
-        if not problem_text or not formula:
-            return jsonify({'success': False, 'error': '문제와 공식을 모두 입력해주세요.'}), 400
-        
+# 생성 버튼
+if st.button("📖 설명 생성하기", type="primary", use_container_width=True):
+    if not problem_text or not formula:
+        st.error("⚠️ 문제와 공식을 모두 입력해주세요.")
+    else:
+        # 해시 생성
         content_hash = generate_hash(problem_text, formula)
         
-        if content_hash in cache:
-            return jsonify({
-                'success': True,
-                'cached': True,
-                'explanation': cache[content_hash]['explanation']
-            })
+        # 캐시 확인
+        if content_hash in st.session_state.cache:
+            st.success("⚡ 캐시된 결과를 불러왔습니다!")
+            explanation = st.session_state.cache[content_hash]
+        else:
+            # 로딩 표시
+            with st.spinner("Claude가 설명을 작성하고 있습니다... (10-30초 소요)"):
+                explanation, error = generate_explanation(problem_text, formula)
+                
+                if error:
+                    st.error(f"오류: {error}")
+                    explanation = None
+                else:
+                    # 캐시에 저장
+                    st.session_state.cache[content_hash] = explanation
+                    st.success("✨ 설명 생성 완료!")
         
-        explanation = generate_explanation(problem_text, formula)
-        
-        if not explanation:
-            return jsonify({'success': False, 'error': 'API 키가 설정되지 않았거나 생성에 실패했습니다.'}), 500
-        
-        cache[content_hash] = {
-            'explanation': explanation,
-            'created_at': datetime.now().isoformat()
-        }
-        
-        return jsonify({
-            'success': True,
-            'cached': False,
-            'explanation': explanation
-        })
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # 결과 표시
+        if explanation:
+            st.divider()
+            st.subheader("✨ 생성 결과")
+            
+            # 마크다운으로 표시
+            st.markdown(explanation)
+            
+            # 복사 버튼
+            st.download_button(
+                label="📋 텍스트 다운로드",
+                data=explanation,
+                file_name="전기기사_공식_설명.txt",
+                mime="text/plain"
+            )
 
-@app.route('/api/health')
-def health():
-    return jsonify({
-        'success': True,
-        'message': 'API is running',
-        'api_key_set': bool(ANTHROPIC_API_KEY)
-    })
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+# 푸터
+st.divider()
+st.markdown("""
+<div style='text-align: center; color: #64748b; padding: 2rem;'>
+    <p>전기기사 공식 AI 설명 생성기 | Powered by Claude API & Streamlit</p>
+    <p>23년 임베디드 개발 경력 | 7년 전기 교육 강사</p>
+</div>
+""", unsafe_allow_html=True)
