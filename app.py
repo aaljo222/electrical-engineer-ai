@@ -48,7 +48,7 @@ def analyze_image_with_claude(image_bytes):
 
     try:
         message = client.messages.create(
-            model="claude-3-opus",   # ← 여기만 수정
+            model="claude-3-haiku-20240307",
             max_tokens=1500,
             messages=[
                 {
