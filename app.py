@@ -1,11 +1,11 @@
 import streamlit as st
 import anthropic
-import hashlib
 import base64
 import io
 from PIL import Image
-from auth_db import login, signup, get_user, logout, save_history, get_history
+from auth_db import login, signup, get_user, logout, save_history
 import os
+
 
 # -------------------------
 # PAGE CONFIG
@@ -15,17 +15,19 @@ st.markdown("<style>" + open("theme.css").read() + "</style>", unsafe_allow_html
 
 
 # -------------------------
-# ANTHROPIC CLIENT (SAFE)
+# ANTHROPIC CLIENT
 # -------------------------
-api_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY", None)
+api_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY")
 
 if not api_key:
     st.error("❗ Anthropic API Key가 설정되지 않았습니다.")
     st.stop()
 
 st.session_state.client = anthropic.Anthropic(api_key=api_key)
+
+
 # -------------------------
-# IMAGE ANALYSIS (OCR)
+# IMAGE OCR
 # -------------------------
 def analyze_image(image_bytes):
     client = st.session_state.client
@@ -67,7 +69,7 @@ def analyze_image(image_bytes):
 
 
 # -------------------------
-# GENERATE EXPLANATION
+# EXPLANATION GENERATOR
 # -------------------------
 def generate_explanation(problem, formula):
     client = st.session_state.client
@@ -95,7 +97,7 @@ def generate_explanation(problem, formula):
 
 
 # -------------------------
-# LOGIN / SIGNUP UI
+# LOGIN UI
 # -------------------------
 def login_ui():
     st.markdown("<div class='login-card'>", unsafe_allow_html=True)
@@ -104,16 +106,14 @@ def login_ui():
     email = st.text_input("이메일")
     password = st.text_input("비밀번호", type="password")
 
-    # 로그인 버튼
     if st.button("로그인", use_container_width=True):
-        user_obj = login(email, password)
+        user = login(email, password)
 
-        if user_obj is None:
+        if user is None:
             st.error("❌ 로그인 실패! 이메일/비밀번호를 확인하세요.")
             return
 
-        st.success("✔ 로그인 성공!")
-        st.session_state.user = user_obj
+        st.session_state.user = user
         st.experimental_rerun()
 
     st.markdown("----")
@@ -133,35 +133,23 @@ def login_ui():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# --------------------------------------------------------------
-# MAIN APPLICATION LOGIC
-# --------------------------------------------------------------
-user = st.session_state.get("user", None)
+# -------------------------
+# MAIN UI
+# -------------------------
+user = st.session_state.get("user")
 
-# 로그인 안 된 상태면 로그인 UI 표시
 if not user:
     login_ui()
     st.stop()
 
-# 로그인 안 된 상태면 로그인 UI 표시
-if not user:
-    login_ui()
-    st.stop()
-
-
-# -------------------------
-# LOGGED-IN UI
-# -------------------------
 st.sidebar.success(f"로그인됨: {user.email}")
 
 if st.sidebar.button("로그아웃"):
     logout()
+    st.session_state.pop("user", None)
     st.experimental_rerun()
 
 
-# -------------------------
-# MAIN FEATURE UI
-# -------------------------
 st.title("⚡ 전기기사 공식 AI 설명 생성기")
 
 uploaded = st.file_uploader("📸 문제 이미지 업로드", type=["png", "jpg", "jpeg"])
@@ -175,25 +163,21 @@ if uploaded:
     image.convert("RGB").save(buf, format="JPEG")
     auto_problem, auto_formula = analyze_image(buf.getvalue())
 
-
 st.divider()
 
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("📝 문제 입력")
     problem_text = st.text_area("문제", auto_problem, height=150)
     formula_text = st.text_input("공식", auto_formula)
 
 with col2:
     st.info("문제를 입력하거나 이미지 업로드 후 '설명 생성하기'를 누르세요.")
 
-
 st.divider()
 
-# -------- EXECUTE EXPLANATION --------
 if st.button("📖 설명 생성하기", type="primary"):
-    if problem_text.strip() == "" or formula_text.strip() == "":
+    if not problem_text.strip() or not formula_text.strip():
         st.error("문제/공식을 입력하세요.")
     else:
         with st.spinner("AI가 설명을 생성 중입니다..."):
@@ -202,11 +186,10 @@ if st.button("📖 설명 생성하기", type="primary"):
         st.success("완료!")
         st.markdown(explanation)
 
-        # 히스토리 저장
         save_history(user.id, problem_text, formula_text, explanation)
 
         st.download_button(
             "📥 텍스트 다운로드",
-            data=explanation,
-            file_name="explanation.txt"
+            explanation,
+            "explanation.txt"
         )
