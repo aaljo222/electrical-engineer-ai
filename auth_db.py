@@ -63,8 +63,13 @@ def save_history(user_id: str, problem_text: str, formula: str, explanation: str
 
 
 def get_history(user_id):
-    res = supabase.table("history").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    res = supabase.table("user_history") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .execute()
     return res.data
+
 
 
 def load_history(user_id):
