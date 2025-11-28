@@ -4,3 +4,4 @@ werkzeug
 bcrypt
 python-dotenv
 requests
+anthropic
