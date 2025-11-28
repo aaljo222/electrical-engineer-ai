@@ -1,24 +1,21 @@
 # core/auth.py
 import streamlit as st
-from core.db import supabase
+from core.db import init_supabase
 
-# Streamlit session key
+# 세션 저장 키
 USER_SESSION_KEY = "logged_user"
 
 
 def check_login():
-    """
-    Streamlit 세션에 로그인 정보가 있는지 확인
-    """
+    """Streamlit 세션에 로그인 정보가 있는지 확인"""
     if USER_SESSION_KEY in st.session_state:
         return st.session_state[USER_SESSION_KEY]
     return None
 
 
 def login(email, password):
-    """
-    Supabase Auth 테이블 기준 로그인 처리
-    """
+    """Supabase Auth 로그인 처리"""
+    supabase = init_supabase()
     try:
         result = supabase.auth.sign_in_with_password(
             {"email": email, "password": password}
@@ -32,32 +29,23 @@ def login(email, password):
             }
             return True
 
-        return False
-
     except Exception as e:
         st.error(f"로그인 실패: {e}")
-        return False
+
+    return False
 
 
 def logout():
-    """
-    로그아웃 → 세션 제거
-    """
+    """로그아웃"""
     if USER_SESSION_KEY in st.session_state:
         del st.session_state[USER_SESSION_KEY]
-    st.success("로그아웃 되었습니다.")
 
 
-def login_form():
-    """
-    로그인 화면 UI 템플릿
-    """
-    st.subheader("🔐 로그인")
+def require_login():
+    """로그인이 필요한 페이지 보호"""
+    user = check_login()
+    if not user:
+        st.error("로그인이 필요합니다.")
+        st.stop()
 
-    email = st.text_input("이메일")
-    password = st.text_input("비밀번호", type="password")
-
-    if st.button("로그인", use_container_width=True):
-        if login(email, password):
-            st.success("로그인 성공!")
-            st.rerun()
+    return user
