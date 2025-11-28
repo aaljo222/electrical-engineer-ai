@@ -3,9 +3,10 @@ supabase
 anthropic
 Pillow==10.2.0
 numpy
+pandas
 python-dotenv
 requests
-markdown-it-py
-mdurl
-pygments
-rich
+markdown-it-py==4.0.0
+mdurl==0.1.2
+pygments==2.19.2
+rich==13.7.1

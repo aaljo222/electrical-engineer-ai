@@ -1,26 +1,42 @@
-def ai_coach_feedback(history, wrong):
+import anthropic
+import os
+
+client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+def generate_explanation(problem, formula, related):
+    context = ""
+    for p in related:
+        context += f"""
+[기출 {p['year']}년 {p['session']}회 Q{p['id']}]
+문제: {p['question']}
+정답: {p['answer']}
+공식: {p['formula']}
+"""
+
     prompt = f"""
-당신은 전기기사 전문 학습 코치입니다.
-다음은 학습자의 기록입니다.
+당신은 전기기사 전문 강사입니다.
 
-전체 풀이 수: {len(history)}
-오답 수: {len(wrong)}
+문제:
+{problem}
 
-이 사용자가 앞으로 어떤 학습 전략을 취해야 하는지,
-약한 과목, 개선 포인트, 하루 루틴을 제안해 주세요.
+공식:
+{formula}
 
-출력 형식:
-1) 현재 실력 진단
-2) 약한 영역 분석
-3) 다음 7일 학습 계획
-4) 자주 틀리는 문제 패턴
-5) 추천 기출 유형
-    """
+참고할 기출문제:
+{context}
 
-    resp = client.messages.create(
-        model="claude-3-sonnet",
-        messages=[{"role":"user","content":prompt}],
-        max_tokens=1200
+다음 형식으로 자세히 설명하세요:
+1) 문제 핵심  
+2) 개념 설명  
+3) 공식 유도  
+4) 단계별 풀이  
+5) 암기 팁  
+"""
+
+    res = client.messages.create(
+        model="claude-3-sonnet-20240229",
+        max_tokens=1500,
+        messages=[{"role": "user", "content": prompt}]
     )
 
-    return resp.content[0].text
+    return res.content[0].text

@@ -1,31 +1,17 @@
 import streamlit as st
-import plotly.express as px
-import pandas as pd
 from core.db import supabase
+from core.auth import check_login
 
-st.title("📊 기출문제 연도/유형 통계")
+st.title("📊 나의 학습 통계")
+user = check_login()
 
-# 데이터 로드
-problems = supabase.table("problems_master").select("*").execute().data
-df = pd.DataFrame(problems)
+history = supabase.table("user_history").select("*").eq("user_id", user.id).execute().data
 
-# 연도별 문제 수
-st.subheader("📌 연도별 출제 문항 수")
-st.plotly_chart(
-    px.histogram(df, x="year", title="연도별 문제 수"),
-    use_container_width=True
-)
+st.write(f"총 학습 문제 수: {len(history)}")
 
-# 과목별 문제 분포
-st.subheader("📌 과목별 문제 분포")
-st.plotly_chart(
-    px.histogram(df, x="subject", title="과목별 문제수"),
-    use_container_width=True
-)
+subjects = {}
+for h in history:
+    subj = h.get("subject", "미정")
+    subjects[subj] = subjects.get(subj, 0) + 1
 
-# 세션 분석
-st.subheader("📌 회차별 출제 경향")
-st.plotly_chart(
-    px.histogram(df, x="session", color="subject"),
-    use_container_width=True
-)
+st.bar_chart(subjects)

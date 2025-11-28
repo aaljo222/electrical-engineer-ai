@@ -1,16 +1,12 @@
 import streamlit as st
-from core.ai_chat import answer_question
 from core.auth import check_login
+from core.ai_chat import ask_ai
 
-st.title("🤖 전기기사 AI 질문 챗봇")
+st.title("💬 전기기사 AI 질문답변")
 
-user = check_login()
+check_login()
 
-query = st.text_input("궁금한 내용을 입력하세요 (예: 변압기 등가회로, 콘덴서 역할 등)")
+question = st.text_input("질문 입력")
 
-if st.button("질문하기"):
-    with st.spinner("AI가 분석 중..."):
-        answer = answer_question(query)
-
-    st.markdown("### 💬 AI 답변")
-    st.write(answer)
+if st.button("질문 보내기"):
+    st.write(ask_ai(question))
