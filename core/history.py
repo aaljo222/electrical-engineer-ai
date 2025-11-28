@@ -1,14 +1,13 @@
-import streamlit as st
-from core.auth import get_user
-from core.history import get_history
+from core.db import supabase
 
-st.title("📘 내 학습 기록")
+def save_history(user_id: str, problem: str, formula: str, explanation: str):
+    supabase.table("history").insert({
+        "user_id": user_id,
+        "problem": problem,
+        "formula": formula,
+        "explanation": explanation
+    }).execute()
 
-user = get_user()
-if not user:
-    st.warning("로그인이 필요합니다.")
-    st.stop()
-
-history = get_history(user["id"])
-
-st.table(history)
+def get_history(user_id: str):
+    res = supabase.table("history").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    return res.data
