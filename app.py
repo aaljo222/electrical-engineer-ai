@@ -33,12 +33,15 @@ def analyze_image(image_bytes):
 
     prompt = """
 전기기사 시험 문제 이미지입니다.
-아래 JSON 형식으로 문제/공식을 정확히 추출하세요:
+
+아래 JSON 형식으로 정확히 출력하세요:
 
 {
  "problem": "...",
  "formula": "..."
 }
+
+JSON만 출력하세요. 설명 금지.
 """
 
     message = client.messages.create(
@@ -60,9 +63,28 @@ def analyze_image(image_bytes):
         }]
     )
 
+    raw = message.content[0].text.strip()
+
     import json
-    result = json.loads(message.content[0].text)
-    return result.get("problem", ""), result.get("formula", "")
+
+    # 1) 우선 정상 JSON인지 시도
+    try:
+        result = json.loads(raw)
+        return result.get("problem", ""), result.get("formula", "")
+    except:
+        pass
+
+    # 2) Claude가 JSON 밖에 문자를 붙인 경우 → 중괄호만 추출
+    try:
+        import re
+        json_str = re.search(r"\{.*?\}", raw, re.S).group()
+        result = json.loads(json_str)
+        return result.get("problem", ""), result.get("formula", "")
+    except:
+        pass
+
+    # 3) 그래도 실패하면 빈 값 반환
+    return "", ""
 
 # -------------------------
 # EXPLANATION GENERATOR
