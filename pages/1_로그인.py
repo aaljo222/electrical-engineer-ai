@@ -15,9 +15,13 @@ if st.button("로그인"):
     if err:
         st.error(err)
     else:
-        st.success("로그인 성공!")
         st.session_state["user"] = user
-        st.rerun()
+        st.success("로그인 성공!")
+
+# 로그인 후 다른 페이지로 자동 이동
+if "user" in st.session_state:
+    st.switch_page("pages/Dashboard.py")
+
 
 
 st.write("---")
