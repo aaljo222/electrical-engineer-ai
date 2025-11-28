@@ -1,21 +1,25 @@
 from supabase import create_client
 import os
 
-url = os.environ["SUPABASE_URL"]
-key = os.environ["SUPABASE_KEY"]
+# Supabase 클라이언트 생성
+def get_client():
+    url = os.environ["SUPABASE_URL"]
+    key = os.environ["SUPABASE_KEY"]
+    return create_client(url, key)
 
-supabase = create_client(url, key)
+supabase = get_client()
 
-def fetch_one(table, column, value):
+# 1) 단일 row 조회
+def fetch_one(table: str, column: str, value):
     res = supabase.table(table).select("*").eq(column, value).single().execute()
-    if res.data:
-        return res.data
-    return None
+    return res.data
 
-def fetch_all(table):
+# 2) 전체 조회
+def fetch_all(table: str):
     res = supabase.table(table).select("*").execute()
     return res.data
 
-def insert(table, data: dict):
+# 3) INSERT
+def insert(table: str, data: dict):
     res = supabase.table(table).insert(data).execute()
     return res.data

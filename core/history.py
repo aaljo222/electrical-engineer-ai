@@ -3,14 +3,15 @@ from core.db import execute, fetch_all
 
 from core.db import insert
 
+from core.db import insert
+
 def save_history(user_id, problem, formula, explanation):
-    data = {
+    insert("history", {
         "user_id": user_id,
         "problem": problem,
         "formula": formula,
         "explanation": explanation
-    }
-    insert("history", data)
+    })
 
 
 

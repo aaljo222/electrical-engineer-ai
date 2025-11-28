@@ -1,6 +1,7 @@
 import streamlit as st
 from core.auth import signup, login
 
+
 st.title("⚡ 로그인")
 
 # 로그인 폼
