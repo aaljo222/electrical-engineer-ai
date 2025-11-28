@@ -5,3 +5,5 @@ bcrypt
 python-dotenv
 requests
 anthropic
+plotly==5.20.0
+
