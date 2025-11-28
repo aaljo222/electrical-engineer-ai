@@ -50,9 +50,9 @@ if st.button("설명 생성"):
 
     # 저장
     save_history(
-        user["id"],
-        problem,
-        formula,
-        explanation
+        user["id"],           # uuid 그대로
+        ai_problem_text,       # 문제 텍스트
+        ai_formula,            # 공식 설명
+        ai_explanation         # 상세 해설
     )
     st.success("기록 저장됨!")
