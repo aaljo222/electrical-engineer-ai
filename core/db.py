@@ -2,14 +2,13 @@ import os
 from supabase import create_client, Client
 import streamlit as st
 
-
 @st.cache_resource
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
 
     if not url or not key:
-        raise ValueError("❗ SUPABASE 설정이 없습니다. 환경변수 또는 secrets.toml 확인하세요.")
+        raise ValueError("❗ SUPABASE 설정이 없습니다.")
 
     return create_client(url, key)
 
@@ -17,15 +16,18 @@ def get_supabase() -> Client:
 def fetch_one(table: str, column: str, value):
     supabase = get_supabase()
 
-    query = supabase.table(table).select("*").eq(column, value).maybe_single()
-    res = query.execute()   # ★ execute() 필수!
+    res = (
+        supabase.table(table)
+        .select("*")
+        .eq(column, value)
+        .limit(1)
+        .execute()
+    )
 
-    # row가 없으면 data = None
-    if res.data is None:
+    if res.data is None or len(res.data) == 0:
         return None
 
-    return res.data
-
+    return res.data[0]
 
 
 def insert(table: str, row: dict):
