@@ -1,24 +1,45 @@
-import hashlib
+from core.db import supabase
 import streamlit as st
-from core.db import select, insert
 
-def hash_pw(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
 
-def signup(email, password):
-    existing = select("users", {"email": f"eq.{email}"})
-    if existing:
-        return None, "이미 존재하는 이메일입니다."
+# ---------------------------
+# 회원가입 (공식 방식)
+# ---------------------------
+def signup(email: str, password: str):
+    try:
+        result = supabase.auth.sign_up(
+            {"email": email, "password": password}
+        )
+        return result
+    except Exception as e:
+        return None
 
-    h = hash_pw(password)
-    user = insert("users", {"email": email, "password": h})
-    return user, None
 
-def login(email, password):
-    h = hash_pw(password)
-    user = select("users", {"email": f"eq.{email}", "password": f"eq.{h}"})
-    return user[0] if user else None
+# ---------------------------
+# 로그인 (공식 방식)
+# ---------------------------
+def login(email: str, password: str):
+    try:
+        result = supabase.auth.sign_in_with_password(
+            {"email": email, "password": password}
+        )
+        return result
+    except Exception:
+        return None
 
+
+# ---------------------------
+# 로그아웃
+# ---------------------------
+def logout():
+    supabase.auth.sign_out()
+    st.session_state.pop("user", None)
+
+
+# ---------------------------
+# 로그인 요구 데코레이터
+# ---------------------------
 def require_login():
     if "user" not in st.session_state:
-        st.switch_page("pages/1_로그인.py")
+        st.warning("로그인이 필요합니다.")
+        st.stop()
