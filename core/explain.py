@@ -2,73 +2,44 @@ import anthropic
 import os
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+MODEL = "claude-sonnet-4-5-20250514"
 
-MODEL_SONNET = "claude-sonnet-4-5-20250929"   # 실제 계정에서 사용 가능
-MODEL_OPUS   = "claude-opus-4-5-20251101"     # 고퀄리티 필요 시
-
-def generate_explanation(problem, formula, related):
-    context = ""
-    for p in related:
-        context += f"""
-[기출 {p['year']}년 {p['session']}회 Q{p['id']}]
-문제: {p['question']}
-정답: {p['answer']}
-공식: {p['formula']}
-"""
-
+# ---------------------------
+# 1) AI 기반 채점
+# ---------------------------
+def grade_answer(correct_answer, user_answer):
     prompt = f"""
-당신은 전기기사 전문 강사입니다.
+당신은 전기기사 전문 채점관입니다.
 
-문제:
-{problem}
+정답: {correct_answer}
+사용자 답: {user_answer}
 
-공식:
-{formula}
-
-참고 기출문제:
-{context}
-
-다음 형식으로 설명하세요:
-1) 문제 핵심  
-2) 개념 설명  
-3) 공식 유도  
-4) 단계별 풀이  
-5) 암기 팁  
+두 값이 의미적으로 같으면 1, 틀리면 0을 출력하세요.
+설명 없이 숫자만 출력하세요.
 """
-
     res = client.messages.create(
-        model=MODEL_SONNET,
-        max_tokens=1500,
+        model=MODEL,
+        max_tokens=10,
         messages=[{"role": "user", "content": prompt}]
     )
 
-    return res.content[0].text
+    return res.content[0].text.strip() == "1"
 
 
-def ai_coach_feedback(history, wrong):
-    total = len(history)
-    wrong_cnt = len(wrong)
-    acc = round((total - wrong_cnt) / total * 100, 1) if total else 0
-
+# ---------------------------
+# 2) AI 설명 생성
+# ---------------------------
+def make_explanation(problem_text, formula):
     prompt = f"""
-당신은 전기기사 AI 학습 코치입니다.
+문제: {problem_text}
+공식: {formula}
 
-사용자 통계:
-- 전체 풀이 수: {total}
-- 오답 수: {wrong_cnt}
-- 정답률: {acc} %
-
-옵션:
-1) 현재 실력 진단
-2) 취약 단원 분석
-3) 앞으로의 학습 전략
-4) 7일 학습 계획
+전기기사 문제를 단계적으로 설명하세요.
 """
 
     res = client.messages.create(
-        model=MODEL_SONNET,
-        max_tokens=2000,
+        model=MODEL,
+        max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]
     )
-
     return res.content[0].text

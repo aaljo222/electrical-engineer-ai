@@ -1,6 +1,6 @@
 import streamlit as st
 import bcrypt
-from core.db import fetch_one, insert
+from core.db import supabase ,fetch_one, insert
 
 def signup(email: str, password: str):
     exist = fetch_one("profiles", "email", email)
@@ -30,8 +30,16 @@ def login(email: str, password: str):
 
 
 def check_login():
-    user = st.session_state.get("user")
+    user = get_user()
     if not user:
-        st.error("로그인이 필요합니다.")
-        st.stop()
+        st.switch_page("pages/1_로그인.py")
     return user
+
+
+
+def get_user():
+    if "user" not in st.session_state:
+        return None
+    return st.session_state["user"]
+
+
