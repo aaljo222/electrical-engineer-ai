@@ -1,8 +1,7 @@
-supabase
 streamlit
-anthropic>=0.25.0
-python-dotenv
-pillow
-requests
+supabase
+postgrest
 psycopg2-binary
-
+bcrypt
+python-dotenv
+requests
