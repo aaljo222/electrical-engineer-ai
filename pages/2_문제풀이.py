@@ -1,18 +1,20 @@
 import streamlit as st
 from core.ocr import analyze_image
 from core.history import save_history
+from core.auth import check_login
 from anthropic import Anthropic
-import os
 from PIL import Image
 import io
+import os
 
-if "user" not in st.session_state:
-    st.switch_page("pages/1_로그인.py")
+MODEL_SONNET = "claude-sonnet-4-5-20250929"
+
+st.set_page_config(page_title="문제풀이", layout="wide")
+st.title("📘 전기기사 문제 풀이")
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-MODEL = "claude-3-5-sonnet-20240620"   # ← 바로 이 모델이 정답!
 
-st.title("📘 전기기사 문제 풀이")
+user = check_login()
 
 uploaded = st.file_uploader("문제 이미지 업로드", type=["png", "jpg", "jpeg"])
 
@@ -33,12 +35,12 @@ if st.button("설명 생성"):
 문제: {problem}
 공식: {formula}
 
-전기기사 문제를 단계적으로 설명하세요.
+전기기사 문제를 단계적으로 상세하게 설명하세요.
 """
 
     with st.spinner("AI 생성 중..."):
         res = client.messages.create(
-            model=MODEL,
+            model=MODEL_SONNET,
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -46,9 +48,11 @@ if st.button("설명 생성"):
 
     st.markdown(explanation)
 
+    # 저장
     save_history(
-        st.session_state["user"]["id"],
+        user["id"],
         problem,
         formula,
         explanation
     )
+    st.success("기록 저장됨!")

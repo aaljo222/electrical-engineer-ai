@@ -1,18 +1,24 @@
 import streamlit as st
-from core.history import get_history
+import pandas as pd
+from core.auth import check_login
+from core.db import get_supabase
 
-if "user" not in st.session_state:
-    st.switch_page("pages/1_로그인.py")
+st.set_page_config(page_title="학습기록", layout="wide")
+st.title("📒 학습 기록")
 
-st.title("📜 나의 기록")
+user = check_login()
+supabase = get_supabase()
 
-rows = get_history(st.session_state["user"]["id"])
+history = (
+    supabase.table("user_history")
+    .select("*")
+    .eq("user_id", user["id"])
+    .execute()
+).data
 
-for r in rows:
-    st.markdown("### 문제")
-    st.write(r["problem"])
-    st.markdown("### 공식")
-    st.write(r["formula"])
-    st.markdown("### 설명")
-    st.write(r["explanation"])
-    st.divider()
+if not history:
+    st.info("아직 풀이 기록이 없습니다.")
+    st.stop()
+
+df = pd.DataFrame(history)
+st.dataframe(df, use_container_width=True)

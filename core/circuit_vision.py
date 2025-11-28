@@ -1,8 +1,11 @@
 import base64
 import json
+import os
 from anthropic import Anthropic
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+MODEL = "claude-opus-4-5-20251101"
 
 def analyze_circuit_image(image_bytes):
     img_b64 = base64.b64encode(image_bytes).decode()
@@ -14,8 +17,7 @@ def analyze_circuit_image(image_bytes):
 {
  "elements": [
     {"type":"resistor", "value":"R1", "between":"A-B"},
-    {"type":"inductor", "value":"L", "between":"B-C"},
-    ...
+    {"type":"inductor", "value":"L", "between":"B-C"}
  ],
  "nodes": ["A","B","C"],
  "topology": "series" 또는 "parallel" 또는 "T형" 또는 "π형",
@@ -25,7 +27,7 @@ def analyze_circuit_image(image_bytes):
 """
 
     resp = client.messages.create(
-        model="claude-3-opus-20240229",
+        model=MODEL,
         max_tokens=1500,
         messages=[{
             "role": "user",

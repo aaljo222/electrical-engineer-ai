@@ -3,7 +3,8 @@ import os
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-MODEL = "claude-3-5-sonnet-latest"
+MODEL_SONNET = "claude-sonnet-4-5-20250929"   # 실제 계정에서 사용 가능
+MODEL_OPUS   = "claude-opus-4-5-20251101"     # 고퀄리티 필요 시
 
 def generate_explanation(problem, formula, related):
     context = ""
@@ -36,7 +37,7 @@ def generate_explanation(problem, formula, related):
 """
 
     res = client.messages.create(
-        model=MODEL,
+        model=MODEL_SONNET,
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -62,14 +63,12 @@ def ai_coach_feedback(history, wrong):
 2) 취약 단원 분석
 3) 앞으로의 학습 전략
 4) 7일 학습 계획
-5) 에너지/컨디션 조절 팁
 """
 
     res = client.messages.create(
-    model="claude-3-5-sonnet-latest",
-    max_tokens=2000,
-    messages=[{"role": "user", "content": prompt}]
-)
-
+        model=MODEL_SONNET,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}]
+    )
 
     return res.content[0].text
