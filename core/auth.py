@@ -1,4 +1,5 @@
-from core.db import supabase, fetch_one, insert
+from core.db import fetch_one, insert
+
 import bcrypt
 
 
