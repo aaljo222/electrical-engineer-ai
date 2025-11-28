@@ -1,36 +1,13 @@
-import psycopg2
-import psycopg2.extras
 import os
+from supabase import create_client, Client
 
+def get_supabase() -> Client:
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
 
-def get_conn():
-    return psycopg2.connect(
-        os.environ["DATABASE_URL"],
-        cursor_factory=psycopg2.extras.RealDictCursor
-    )
+    if not url or not key:
+        raise ValueError("SUPABASE_URL 또는 SUPABASE_KEY가 설정되지 않았습니다.")
 
+    return create_client(url, key)
 
-def fetch_one(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def fetch_all(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def execute(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    conn.commit()
-    conn.close()
+supabase = get_supabase()
