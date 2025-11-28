@@ -1,19 +1,32 @@
 import requests
+import streamlit as st
 import os
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets["SUPABASE_KEY"]
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
 }
 
-def supabase_query(sql, params=()):
-    payload = {
-        "query": sql,
-        "params": params,
-    }
-    url = f"{SUPABASE_URL}/rest/v1/rpc/pg_rpc"
-    res = requests.post(url, json=payload, headers=headers)
+def select(table, eq=None):
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    params = {"select": "*"}
+
+    if eq:
+        params.update(eq)
+
+    res = requests.get(url, headers=headers, params=params)
+    return res.json()
+
+def insert(table, data):
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    res = requests.post(url, headers=headers, json=data)
+    return res.json()
+
+def update(table, match, data):
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    res = requests.patch(url, headers=headers, params=match, json=data)
     return res.json()

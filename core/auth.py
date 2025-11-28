@@ -1,29 +1,24 @@
 import hashlib
-from core.db import supabase_query
+import streamlit as st
+from core.db import select, insert
 
-def hash_pw(pw: str):
+def hash_pw(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
 def signup(email, password):
-    h = hash_pw(password)
-
-    # 이메일 중복 체크
-    exists = supabase_query("select * from users where email = %s", (email,))
-    if exists:
+    existing = select("users", {"email": f"eq.{email}"})
+    if existing:
         return None, "이미 존재하는 이메일입니다."
 
-    supabase_query(
-        "insert into users (email, password) values (%s, %s)",
-        (email, h)
-    )
-    return {"email": email}, None
+    h = hash_pw(password)
+    user = insert("users", {"email": email, "password": h})
+    return user, None
 
 def login(email, password):
     h = hash_pw(password)
-
-    user = supabase_query(
-        "select id, email from users where email = %s and password = %s",
-        (email, h)
-    )
-
+    user = select("users", {"email": f"eq.{email}", "password": f"eq.{h}"})
     return user[0] if user else None
+
+def require_login():
+    if "user" not in st.session_state:
+        st.switch_page("pages/1_로그인.py")
