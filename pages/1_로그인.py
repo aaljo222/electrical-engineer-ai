@@ -36,3 +36,12 @@ if st.button("회원가입"):
         st.success("회원가입 완료!")
     else:
         st.error(err)
+
+def check_login():
+    # 로그인 안 되어 있으면 로그인 페이지로 이동
+    user = st.session_state.get("user")
+    if not user:
+        st.error("로그인이 필요합니다.")
+        st.stop()
+
+    return user
