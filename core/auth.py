@@ -1,51 +1,29 @@
-# core/auth.py
-import streamlit as st
-from core.db import init_supabase
+import hashlib
+from core.db import supabase_query
 
-# 세션 저장 키
-USER_SESSION_KEY = "logged_user"
+def hash_pw(pw: str):
+    return hashlib.sha256(pw.encode()).hexdigest()
 
+def signup(email, password):
+    h = hash_pw(password)
 
-def check_login():
-    """Streamlit 세션에 로그인 정보가 있는지 확인"""
-    if USER_SESSION_KEY in st.session_state:
-        return st.session_state[USER_SESSION_KEY]
-    return None
+    # 이메일 중복 체크
+    exists = supabase_query("select * from users where email = %s", (email,))
+    if exists:
+        return None, "이미 존재하는 이메일입니다."
 
+    supabase_query(
+        "insert into users (email, password) values (%s, %s)",
+        (email, h)
+    )
+    return {"email": email}, None
 
 def login(email, password):
-    """Supabase Auth 로그인 처리"""
-    supabase = init_supabase()
-    try:
-        result = supabase.auth.sign_in_with_password(
-            {"email": email, "password": password}
-        )
-        user = result.user
+    h = hash_pw(password)
 
-        if user:
-            st.session_state[USER_SESSION_KEY] = {
-                "email": user.email,
-                "id": user.id,
-            }
-            return True
+    user = supabase_query(
+        "select id, email from users where email = %s and password = %s",
+        (email, h)
+    )
 
-    except Exception as e:
-        st.error(f"로그인 실패: {e}")
-
-    return False
-
-
-def logout():
-    """로그아웃"""
-    if USER_SESSION_KEY in st.session_state:
-        del st.session_state[USER_SESSION_KEY]
-
-
-def require_login():
-    """로그인이 필요한 페이지 보호"""
-    user = check_login()
-    if not user:
-        st.error("로그인이 필요합니다.")
-        st.stop()
-
-    return user
+    return user[0] if user else None

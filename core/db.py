@@ -1,11 +1,19 @@
+import requests
 import os
-from supabase import create_client
 
-def init_supabase():
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets["SUPABASE_KEY"]
 
-    if not url or not key:
-        raise Exception("❌ SUPABASE_URL or SUPABASE_KEY missing in Streamlit Secrets!")
+headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+}
 
-    return create_client(url, key)
+def supabase_query(sql, params=()):
+    payload = {
+        "query": sql,
+        "params": params,
+    }
+    url = f"{SUPABASE_URL}/rest/v1/rpc/pg_rpc"
+    res = requests.post(url, json=payload, headers=headers)
+    return res.json()
