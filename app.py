@@ -156,16 +156,6 @@ if st.sidebar.button("로그아웃"):
     st.session_state.pop("user", None)
     st.rerun()
 
-
-if st.sidebar.button("📜 내 기록 보기"):
-    st.session_state.page = "history"
-    st.experimental_rerun()
-
-if st.sidebar.button("로그아웃"):
-    logout()
-    st.session_state.pop("user", None)
-    st.experimental_rerun()
-
 # 히스토리 페이지 라우팅
 if page == "history":
     from ui_history_page import render_history_page
