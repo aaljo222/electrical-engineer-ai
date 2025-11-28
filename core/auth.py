@@ -1,33 +1,34 @@
-from core.db import fetch_one, execute
-import bcrypt
+from core.db import get_supabase
+from werkzeug.security import generate_password_hash, check_password_hash
+
+supabase = get_supabase()
+
 
 def signup(email: str, password: str):
     # 이메일 중복 체크
-    exist = fetch_one("SELECT * FROM profiles WHERE email=%s", (email,))
-    if exist:
+    exist = supabase.table("profiles").select("*").eq("email", email).execute()
+    if exist.data:
         return None, "이미 존재하는 이메일입니다."
 
-    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    hashed = generate_password_hash(password)
 
-    execute(
-        "INSERT INTO profiles(email, password) VALUES(%s, %s)",
-        (email, hashed)
-    )
+    res = supabase.table("profiles").insert({
+        "email": email,
+        "password": hashed
+    }).execute()
+
     return True, None
 
 
 def login(email: str, password: str):
-    user = fetch_one("SELECT * FROM profiles WHERE email=%s", (email,))
-    if not user:
-        return None, "존재하지 않는 이메일입니다."
+    res = supabase.table("profiles").select("*").eq("email", email).execute()
 
-    hashed = user["password"]
+    if not res.data:
+        return None
 
-    if bcrypt.checkpw(password.encode(), hashed.encode()):
-        return user, None
-    else:
-        return None, "비밀번호가 일치하지 않습니다."
+    row = res.data[0]
 
+    if not check_password_hash(row["password"], password):
+        return None
 
-def logout():
-    return True
+    return row
