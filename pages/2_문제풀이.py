@@ -10,7 +10,7 @@ if "user" not in st.session_state:
     st.switch_page("pages/1_로그인.py")
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-MODEL = "claude-3-5-sonnet-latest"
+MODEL = "claude-3-5-sonnet-20240620"   # ← 바로 이 모델이 정답!
 
 st.title("📘 전기기사 문제 풀이")
 
