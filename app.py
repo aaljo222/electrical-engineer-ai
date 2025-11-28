@@ -6,13 +6,11 @@ from PIL import Image
 from auth_db import login, signup, get_user, logout, save_history
 import os
 
-
 # -------------------------
 # PAGE CONFIG
 # -------------------------
 st.set_page_config(page_title="전기기사 공식 AI 설명 생성기", page_icon="⚡", layout="wide")
 st.markdown("<style>" + open("theme.css").read() + "</style>", unsafe_allow_html=True)
-
 
 # -------------------------
 # ANTHROPIC CLIENT
@@ -24,7 +22,6 @@ if not api_key:
     st.stop()
 
 st.session_state.client = anthropic.Anthropic(api_key=api_key)
-
 
 # -------------------------
 # IMAGE OCR
@@ -66,7 +63,6 @@ def analyze_image(image_bytes):
     import json
     result = json.loads(message.content[0].text)
     return result.get("problem", ""), result.get("formula", "")
-
 
 # -------------------------
 # EXPLANATION GENERATOR
@@ -134,22 +130,38 @@ def login_ui():
 
 
 # -------------------------
-# MAIN UI
+# ROUTING
 # -------------------------
+page = st.session_state.get("page", "main")
+
 user = st.session_state.get("user")
 
+# 로그인되지 않으면 로그인 페이지 표시
 if not user:
     login_ui()
     st.stop()
 
+# 로그인됨 → 사이드바 표시
 st.sidebar.success(f"로그인됨: {user.email}")
+
+if st.sidebar.button("📜 내 기록 보기"):
+    st.session_state.page = "history"
+    st.experimental_rerun()
 
 if st.sidebar.button("로그아웃"):
     logout()
     st.session_state.pop("user", None)
     st.experimental_rerun()
 
+# 히스토리 페이지 라우팅
+if page == "history":
+    from ui_history_page import render_history_page
+    render_history_page(user.id)
+    st.stop()
 
+# -------------------------
+# MAIN UI
+# -------------------------
 st.title("⚡ 전기기사 공식 AI 설명 생성기")
 
 uploaded = st.file_uploader("📸 문제 이미지 업로드", type=["png", "jpg", "jpeg"])
