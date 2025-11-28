@@ -1,5 +1,6 @@
 streamlit==1.32.0
-anthropic>=0.25.0
+
+anthropic>=0.28.0
 pillow
 
 supabase==2.4.6
@@ -7,10 +8,8 @@ supabase-py==2.4.6
 
 python-dotenv
 altair>=4.0
+requests
 
 rich
-markdown-it-py>=2.0.0
+markdown-it-py>=2.2.0
 mdurl
-
-# (supabase REST를 직접 쓸 경우)
-httpx>=0.27.0
