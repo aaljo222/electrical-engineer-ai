@@ -10,6 +10,7 @@ if "user" not in st.session_state:
     st.switch_page("pages/1_로그인.py")
 
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+MODEL = "claude-3-5-sonnet-latest"
 
 st.title("📘 전기기사 문제 풀이")
 
@@ -34,9 +35,10 @@ if st.button("설명 생성"):
 
 전기기사 문제를 단계적으로 설명하세요.
 """
+
     with st.spinner("AI 생성 중..."):
         res = client.messages.create(
-            model="claude-3-sonnet-20240229",
+            model=MODEL,
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )

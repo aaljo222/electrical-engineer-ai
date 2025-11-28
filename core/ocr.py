@@ -1,26 +1,30 @@
-import base64
-from anthropic import Anthropic
+import anthropic
 import os
+from PIL import Image
+import base64
+import io
 
-client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+MODEL = "claude-3-5-haiku-latest"   # OCR 최적
 
-def analyze_image(image_bytes):
-    img_b64 = base64.b64encode(image_bytes).decode()
+def analyze_image(img_bytes):
+    """
+    이미지에서 텍스트(문제·공식)를 추출하는 함수
+    """
+    image_base64 = base64.b64encode(img_bytes).decode("utf-8")
 
     prompt = """
-전기기사 시험 문제 이미지입니다.
+당신은 전기기사 문제 OCR 전문가입니다.
+이미지에서 문제와 공식을 정확하게 추출하세요.
 
-아래 JSON 형식으로 출력하세요:
-
-{
- "problem": "...",
- "formula": "..."
-}
-JSON 외 설명 금지.
+출력 형식:
+문제: ...
+공식: ...
 """
-    response = client.messages.create(
-        model="claude-3-haiku-20240307",
+
+    res = client.messages.create(
+        model=MODEL,
         max_tokens=800,
         messages=[
             {
@@ -32,25 +36,24 @@ JSON 외 설명 금지.
                         "source": {
                             "type": "base64",
                             "media_type": "image/jpeg",
-                            "data": img_b64
-                        }
-                    }
-                ]
+                            "data": image_base64,
+                        },
+                    },
+                ],
             }
-        ]
+        ],
     )
 
-    import json
-    import re
+    text = res.content[0].text
 
-    raw = response.content[0].text
+    # 간단 파싱
+    problem = ""
+    formula = ""
 
-    try:
-        result = json.loads(raw)
-        return result.get("problem", ""), result.get("formula", "")
-    except:
-        match = re.search(r"\{.*?\}", raw, re.S)
-        if match:
-            result = json.loads(match.group())
-            return result.get("problem", ""), result.get("formula", "")
-        return "", ""
+    for line in text.split("\n"):
+        if line.startswith("문제:"):
+            problem = line.replace("문제:", "").strip()
+        elif line.startswith("공식:"):
+            formula = line.replace("공식:", "").strip()
+
+    return problem, formula
