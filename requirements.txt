@@ -1,7 +1,6 @@
 streamlit
 supabase
-postgrest
-psycopg2-binary
+werkzeug
 bcrypt
 python-dotenv
 requests
