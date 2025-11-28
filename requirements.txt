@@ -1,7 +1,6 @@
-streamlit==1.32.0
-supabase
-supabase-py
+streamlit
 anthropic>=0.25.0
 python-dotenv
 pillow
 requests
+psycopg2-binary

@@ -1,51 +1,56 @@
-import anthropic
 import base64
-import json
-import re
-from PIL import Image
-import io
-import streamlit as st
+from anthropic import Anthropic
+import os
 
-client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_KEY"])
+client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
 
 def analyze_image(image_bytes):
-    b64 = base64.b64encode(image_bytes).decode()
+    img_b64 = base64.b64encode(image_bytes).decode()
 
     prompt = """
-아래 이미지에 있는 전기기사 문제를 JSON만 출력하세요:
+전기기사 시험 문제 이미지입니다.
+
+아래 JSON 형식으로 출력하세요:
 
 {
- "problem": "",
- "formula": ""
+ "problem": "...",
+ "formula": "..."
 }
+JSON 외 설명 금지.
 """
-
-    res = client.messages.create(
+    response = client.messages.create(
         model="claude-3-haiku-20240307",
-        max_tokens=1500,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": b64
+        max_tokens=800,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": img_b64
+                        }
                     }
-                }
-            ]
-        }]
+                ]
+            }
+        ]
     )
 
-    text = res.content[0].text.strip()
+    import json
+    import re
+
+    raw = response.content[0].text
 
     try:
-        return json.loads(text)
+        result = json.loads(raw)
+        return result.get("problem", ""), result.get("formula", "")
     except:
-        try:
-            block = re.search(r"\{.*?\}", text, re.S).group()
-            return json.loads(block)
-        except:
-            return {"problem": "", "formula": ""}
+        match = re.search(r"\{.*?\}", raw, re.S)
+        if match:
+            result = json.loads(match.group())
+            return result.get("problem", ""), result.get("formula", "")
+        return "", ""

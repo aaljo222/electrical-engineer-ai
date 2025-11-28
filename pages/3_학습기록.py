@@ -1,21 +1,18 @@
 import streamlit as st
-from core.auth import require_login
-from core.history import load_history
+from core.history import get_history
 
-require_login()
+if "user" not in st.session_state:
+    st.switch_page("pages/1_로그인.py")
 
-st.title("📜 학습 기록")
+st.title("📜 나의 기록")
 
-hist = load_history(st.session_state.user["id"])
+rows = get_history(st.session_state["user"]["id"])
 
-for h in hist:
-    st.write("### ✏ 문제")
-    st.write(h["problem"])
-
-    st.write("### 📐 공식")
-    st.write(h["formula"])
-
-    st.write("### 📘 설명")
-    st.write(h["explanation"])
-
+for r in rows:
+    st.markdown("### 문제")
+    st.write(r["problem"])
+    st.markdown("### 공식")
+    st.write(r["formula"])
+    st.markdown("### 설명")
+    st.write(r["explanation"])
     st.divider()

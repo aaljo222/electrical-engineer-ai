@@ -1,42 +1,52 @@
 import streamlit as st
-from core.auth import require_login
 from core.ocr import analyze_image
 from core.history import save_history
-import anthropic
+from anthropic import Anthropic
+import os
+from PIL import Image
+import io
 
-require_login()
+if "user" not in st.session_state:
+    st.switch_page("pages/1_로그인.py")
 
-client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_KEY"])
-st.title("📘 전기기사 문제풀이")
+client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-uploaded = st.file_uploader("문제 이미지 업로드", type=["jpg", "png", "jpeg"])
+st.title("📘 전기기사 문제 풀이")
+
+uploaded = st.file_uploader("문제 이미지 업로드", type=["png", "jpg", "jpeg"])
 
 problem = ""
 formula = ""
 
 if uploaded:
-    img = uploaded.read()
-    data = analyze_image(img)
-    problem = data["problem"]
-    formula = data["formula"]
+    img = Image.open(uploaded)
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG")
+    problem, formula = analyze_image(buf.getvalue())
 
-problem_text = st.text_area("문제", problem)
-formula_text = st.text_input("공식", formula)
+problem = st.text_area("문제", problem)
+formula = st.text_input("공식", formula)
 
 if st.button("설명 생성"):
     prompt = f"""
-전기기사 문제를 단계별로 설명하세요.
+문제: {problem}
+공식: {formula}
 
-문제: {problem_text}
-공식: {formula_text}
+전기기사 문제를 단계적으로 설명하세요.
 """
-    res = client.messages.create(
-        model="claude-3-sonnet-20240229",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
+    with st.spinner("AI 생성 중..."):
+        res = client.messages.create(
+            model="claude-3-sonnet-20240229",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        explanation = res.content[0].text
 
-    explanation = res.content[0].text
     st.markdown(explanation)
 
-    save_history(st.session_state.user["id"], problem_text, formula_text, explanation)
+    save_history(
+        st.session_state["user"]["id"],
+        problem,
+        formula,
+        explanation
+    )

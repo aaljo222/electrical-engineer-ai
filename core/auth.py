@@ -1,45 +1,30 @@
-from core.db import supabase
-import streamlit as st
+import hashlib
+from core.db import fetch_one, execute
 
 
-# ---------------------------
-# 회원가입 (공식 방식)
-# ---------------------------
-def signup(email: str, password: str):
-    try:
-        result = supabase.auth.sign_up(
-            {"email": email, "password": password}
-        )
-        return result
-    except Exception as e:
-        return None
+def hash_pw(password: str):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
-# ---------------------------
-# 로그인 (공식 방식)
-# ---------------------------
-def login(email: str, password: str):
-    try:
-        result = supabase.auth.sign_in_with_password(
-            {"email": email, "password": password}
-        )
-        return result
-    except Exception:
-        return None
+def signup(email, password):
+    # 이메일 중복 확인
+    exist = fetch_one("SELECT * FROM profiles WHERE email=%s", (email,))
+    if exist:
+        return None, "이미 존재하는 이메일입니다."
+
+    h = hash_pw(password)
+
+    execute(
+        "INSERT INTO profiles (email, password) VALUES (%s, %s)",
+        (email, h)
+    )
+    return True, None
 
 
-# ---------------------------
-# 로그아웃
-# ---------------------------
-def logout():
-    supabase.auth.sign_out()
-    st.session_state.pop("user", None)
-
-
-# ---------------------------
-# 로그인 요구 데코레이터
-# ---------------------------
-def require_login():
-    if "user" not in st.session_state:
-        st.warning("로그인이 필요합니다.")
-        st.stop()
+def login(email, password):
+    h = hash_pw(password)
+    user = fetch_one(
+        "SELECT id, email FROM profiles WHERE email=%s AND password=%s",
+        (email, h)
+    )
+    return user
