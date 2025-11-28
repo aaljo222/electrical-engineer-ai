@@ -16,13 +16,16 @@ def get_supabase() -> Client:
 
 def fetch_one(table: str, column: str, value):
     supabase = get_supabase()
-    res = supabase.table(table).select("*").eq(column, value).maybe_single()
 
-    # row가 없을 경우 None 반환 (중요!)
-    if res is None or res.data is None:
+    query = supabase.table(table).select("*").eq(column, value).maybe_single()
+    res = query.execute()   # ★ execute() 필수!
+
+    # row가 없으면 data = None
+    if res.data is None:
         return None
 
     return res.data
+
 
 
 def insert(table: str, row: dict):
