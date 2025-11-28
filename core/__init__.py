@@ -1,2 +1,3 @@
-from .db import init_supabase, supabase
-from .auth import check_login, login, logout
+# core/__init__.py
+
+# 아무것도 import 하지 않음.

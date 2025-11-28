@@ -1,6 +1,7 @@
 import streamlit as st
 from core.auth import login, signup
 
+
 st.title("⚡ 로그인")
 
 email = st.text_input("이메일")
