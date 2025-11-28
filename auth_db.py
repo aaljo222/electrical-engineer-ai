@@ -1,97 +1,72 @@
-import os
-import datetime
-import streamlit as st
-from supabase import create_client, Client
+# auth_db.py
+from supabase_rest import db_select, db_insert
+import uuid
+from datetime import datetime
 
-
-@st.cache_resource
-def get_supabase() -> Client:
-    # 1) Render / 실제 배포 환경 변수 우선
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
-
-    # 2) 로컬 개발 (secrets.toml)
-    if not url:
-        url = st.secrets.get("SUPABASE_URL", None)
-    if not key:
-        key = st.secrets.get("SUPABASE_KEY", None)
-
-    if not url or not key:
-        raise ValueError(
-            "❗ SUPABASE_URL 또는 SUPABASE_KEY가 설정되지 않았습니다.\n"
-            "Render에서는 환경 변수로 추가하고,\n"
-            "로컬에서는 .streamlit/secrets.toml 사용하세요."
-        )
-
-    return create_client(url, key)
-
-
-supabase = get_supabase()
-
-
-# -------------------------
-# AUTH
-# -------------------------
+# ------------------------------
+# 회원가입
+# ------------------------------
 def signup(email, password):
-    if not email or not password:
-        return None, "❌ 이메일과 비밀번호를 입력하세요."
+    users = db_select("users", {"email": f"eq.{email}"})
 
-    res = supabase.auth.sign_up({
+    if users:
+        return None, "이미 존재하는 이메일입니다."
+
+    new_user = {
+        "id": str(uuid.uuid4()),
         "email": email,
-        "password": password
-    })
+        "password": password,
+        "created_at": datetime.utcnow().isoformat()
+    }
 
-    if res is None or res.user is None:
-        return None, "❌ 회원가입 실패: 이미 존재하는 이메일이거나 유효하지 않습니다."
+    inserted = db_insert("users", new_user)
+    return inserted, None
 
-    return res.user, None
-
-
+# ------------------------------
+# 로그인
+# ------------------------------
 def login(email, password):
-    try:
-        res = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+    result = db_select(
+        "users",
+        {
+            "email": f"eq.{email}",
+            "password": f"eq.{password}"
+        },
+        limit=1
+    )
 
-        # User 객체만 반환 (중요)
-        return res.user
-
-    except Exception:
-        return None
-
-
-def logout():
-    supabase.auth.sign_out()
-
-
-def get_user():
-    session = supabase.auth.get_session()
-    if session and session.user:
-        return session.user
+    if result:
+        return result[0]
     return None
 
+def logout():
+    pass  # Streamlit session 자체가 맡아서 처리함
 
-# -------------------------
-# HISTORY
-# -------------------------
-def save_history(user_id: str, problem: str, formula: str, explanation: str):
+# ------------------------------
+# 사용자 ID로 조회
+# ------------------------------
+def get_user(user_id):
+    result = db_select("users", {"id": f"eq.{user_id}"}, limit=1)
+    if result:
+        return result[0]
+    return None
+
+# ------------------------------
+# 기록 저장
+# ------------------------------
+def save_history(user_id, problem, formula, explanation):
     data = {
+        "id": str(uuid.uuid4()),
         "user_id": user_id,
         "problem": problem,
         "formula": formula,
         "explanation": explanation,
-        "created_at": datetime.datetime.utcnow().isoformat()
+        "created_at": datetime.utcnow().isoformat()
     }
-    supabase.table("history").insert(data).execute()
+    return db_insert("history", data)
 
-
-def get_history(user_id: str):
-    res = supabase.table("history") \
-        .select("*") \
-        .eq("user_id", user_id) \
-        .order("created_at", desc=True) \
-        .execute()
-
-    return res.data
-
+# ------------------------------
+# 기록 조회
+# ------------------------------
+def get_history(user_id):
+    return db_select("history", {"user_id": f"eq.{user_id}"})
