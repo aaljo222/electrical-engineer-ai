@@ -13,6 +13,7 @@ def get_supabase() -> Client:
     return create_client(url, key)
 
 
+# 하나의 row 가져오기
 def fetch_one(table: str, column: str, value):
     supabase = get_supabase()
 
@@ -24,13 +25,28 @@ def fetch_one(table: str, column: str, value):
         .execute()
     )
 
-    if res.data is None or len(res.data) == 0:
+    if not res.data:
         return None
 
     return res.data[0]
 
 
-def insert(table: str, row: dict):
+# 여러 row 가져오기
+def fetch_all(table: str, filters: dict = None):
     supabase = get_supabase()
-    res = supabase.table(table).insert(row).execute()
+
+    query = supabase.table(table).select("*")
+
+    if filters:
+        for col, val in filters.items():
+            query = query.eq(col, val)
+
+    res = query.execute()
+    return res.data or []
+
+
+# row 삽입
+def insert(table: str, data: dict):
+    supabase = get_supabase()
+    res = supabase.table(table).insert(data).execute()
     return res.data

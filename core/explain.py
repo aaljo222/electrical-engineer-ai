@@ -3,6 +3,7 @@ import os
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+
 def generate_explanation(problem, formula, related):
     context = ""
     for p in related:
@@ -22,10 +23,10 @@ def generate_explanation(problem, formula, related):
 공식:
 {formula}
 
-참고할 기출문제:
+참고 기출문제:
 {context}
 
-다음 형식으로 자세히 설명하세요:
+다음 형식으로 설명하세요:
 1) 문제 핵심  
 2) 개념 설명  
 3) 공식 유도  
@@ -41,30 +42,27 @@ def generate_explanation(problem, formula, related):
 
     return res.content[0].text
 
-import anthropic
-import os
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
+# 🔥 Dashboard용 AI 학습 코치
 def ai_coach_feedback(history, wrong):
     total = len(history)
-    wrong_count = len(wrong)
+    wrong_cnt = len(wrong)
+    acc = round((total - wrong_cnt) / total * 100, 1) if total else 0
 
     prompt = f"""
-당신은 전기기사 전문 AI 학습 코치입니다.
+당신은 전기기사 AI 학습 코치입니다.
 
-사용자 데이터:
+사용자 통계:
 - 전체 풀이 수: {total}
-- 오답 수: {wrong_count}
-- 정답률: {round((total - wrong_count) / total * 100, 1) if total else 0} %
+- 오답 수: {wrong_cnt}
+- 정답률: {acc} %
 
-오답 목록과 풀이 기록을 분석하여 아래 형식으로 설명하세요:
-
-1) 학습자 현재 실력 분석  
-2) 자주 틀리는 개념 또는 단원  
-3) 앞으로 집중해야 할 학습 전략  
-4) 다음 7일 학습 스케줄  
-5) 에너지 관리 팁  
+옵션:
+1) 현재 실력 진단
+2) 취약 단원 분석
+3) 앞으로의 학습 전략
+4) 7일 학습 계획
+5) 에너지/컨디션 조절 팁
 """
 
     res = client.messages.create(
