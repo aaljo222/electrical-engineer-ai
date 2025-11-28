@@ -3,7 +3,6 @@ anthropic
 pillow
 
 supabase==2.4.6
-supabase-py==2.4.6
 gotrue==2.4.3
 postgrest==0.11.3
 storage3==0.7.6
