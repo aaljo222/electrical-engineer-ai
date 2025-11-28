@@ -66,9 +66,10 @@ def ai_coach_feedback(history, wrong):
 """
 
     res = client.messages.create(
-        model=MODEL,
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}]
-    )
+    model="claude-3-5-sonnet-latest",
+    max_tokens=2000,
+    messages=[{"role": "user", "content": prompt}]
+)
+
 
     return res.content[0].text
