@@ -65,26 +65,22 @@ JSON만 출력하세요. 설명 금지.
 
     raw = message.content[0].text.strip()
 
-    import json
+    import json, re
 
     try:
-        result = json.loads(raw)
-        return result.get("problem", ""), result.get("formula", "")
+        return json.loads(raw).get("problem", ""), json.loads(raw).get("formula", "")
     except:
         pass
 
     try:
-        import re
         json_str = re.search(r"\{.*?\}", raw, re.S).group()
         result = json.loads(json_str)
         return result.get("problem", ""), result.get("formula", "")
     except:
-        pass
-
-    return "", ""
+        return "", ""
 
 # -------------------------
-# EXPLANATION GENERATOR
+# EXPLANATION
 # -------------------------
 def generate_explanation(problem, formula):
     client = st.session_state.client
@@ -147,12 +143,7 @@ def login_ui():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------
-# ROUTING
-# -------------------------
-page = st.session_state.get("page", "main")
-
-# -------------------------
-# MAIN UI
+# MAIN ROUTING
 # -------------------------
 user = st.session_state.get("user")
 
@@ -160,7 +151,6 @@ if not user:
     login_ui()
     st.stop()
 
-# ⭐ 로그인 이후에만 사이드바 메뉴 생성 ⭐
 st.sidebar.success(f"로그인됨: {user.email}")
 
 if st.sidebar.button("📜 내 기록 보기"):
@@ -170,13 +160,8 @@ if st.sidebar.button("📜 내 기록 보기"):
 
 if st.sidebar.button("로그아웃"):
     logout()
-    st.session_state.pop("user", None)
+    st.session_state.pop("user")
     st.rerun()
-
-if page == "history":
-    from ui_history_page import render_history_page
-    render_history_page(user.id)
-    st.stop()
 
 # -------------------------
 # MAIN UI
