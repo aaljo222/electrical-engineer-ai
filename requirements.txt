@@ -1,4 +1,14 @@
-streamlit
+streamlit==1.31.1
 anthropic
-supabase
 pillow
+
+supabase==2.4.6
+supabase-py==2.4.6
+gotrue==2.4.3
+postgrest==0.11.3
+storage3==0.7.6
+realtime==1.0.5
+
+rich==13.7.1
+markdown-it-py==2.2.0
+mdurl==0.1.2

@@ -67,14 +67,12 @@ JSON만 출력하세요. 설명 금지.
 
     import json
 
-    # 1) 우선 정상 JSON인지 시도
     try:
         result = json.loads(raw)
         return result.get("problem", ""), result.get("formula", "")
     except:
         pass
 
-    # 2) Claude가 JSON 밖에 문자를 붙인 경우 → 중괄호만 추출
     try:
         import re
         json_str = re.search(r"\{.*?\}", raw, re.S).group()
@@ -83,7 +81,6 @@ JSON만 출력하세요. 설명 금지.
     except:
         pass
 
-    # 3) 그래도 실패하면 빈 값 반환
     return "", ""
 
 # -------------------------
@@ -112,7 +109,6 @@ def generate_explanation(problem, formula):
     )
 
     return res.content[0].text
-
 
 # -------------------------
 # LOGIN UI
@@ -150,7 +146,6 @@ def login_ui():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
 # -------------------------
 # ROUTING
 # -------------------------
@@ -178,7 +173,6 @@ if st.sidebar.button("로그아웃"):
     st.session_state.pop("user", None)
     st.rerun()
 
-# 히스토리 페이지 라우팅
 if page == "history":
     from ui_history_page import render_history_page
     render_history_page(user.id)
