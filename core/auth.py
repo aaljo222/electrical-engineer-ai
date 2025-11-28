@@ -1,45 +1,45 @@
 import streamlit as st
 import bcrypt
-from core.db import supabase ,fetch_one, insert
+from core.db import supabase
 
+# 회원가입
 def signup(email: str, password: str):
-    exist = fetch_one("profiles", "email", email)
-    if exist:
-        return None, "이미 존재하는 이메일입니다."
+    # 이미 존재하는 이메일인지 확인
+    exist = supabase.table("profiles").select("*").eq("email", email).execute()
+    if exist.data:
+        return False, "이미 가입된 이메일입니다."
 
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-    insert("profiles", {
+    result = supabase.table("profiles").insert({
         "email": email,
         "password": hashed
-    })
+    }).execute()
 
-    return True, None
+    return True, "회원가입 완료!"
 
-
+# 로그인
 def login(email: str, password: str):
-    user = fetch_one("profiles", "email", email)
-    if not user:
-        return None, "존재하지 않는 이메일입니다."
+    user = supabase.table("profiles").select("*").eq("email", email).single().execute()
 
-    hashed = user["password"].encode("utf-8")
-    if not bcrypt.checkpw(password.encode("utf-8"), hashed):
-        return None, "비밀번호가 일치하지 않습니다."
+    if not user.data:
+        return False, "가입되지 않은 이메일입니다."
 
-    return user, None
+    hashed = user.data["password"]
 
+    if not bcrypt.checkpw(password.encode(), hashed.encode()):
+        return False, "비밀번호가 틀렸습니다."
 
-def check_login():
-    user = get_user()
-    if not user:
-        st.switch_page("pages/1_로그인.py")
-    return user
+    # 로그인 성공 → 세션 저장
+    st.session_state["user"] = user.data
+    return True, "로그인 성공!"
 
-
-
+# 현재 로그인 유저 가져오기
 def get_user():
+    return st.session_state.get("user")
+
+# 로그인 안 되어 있으면 로그인 페이지로 이동
+def check_login():
     if "user" not in st.session_state:
-        return None
+        st.switch_page("pages/1_로그인.py")
     return st.session_state["user"]
-
-

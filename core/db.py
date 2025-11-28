@@ -1,6 +1,15 @@
 import os
-from supabase import create_client, Client
-import streamlit as st
+from supabase import create_client
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+# supabase 클라이언트 생성 (전역)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+# supabase 클라이언트 생성 (전역)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @st.cache_resource
 def get_supabase() -> Client:
