@@ -3,6 +3,7 @@ import os
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+MODEL = "claude-3-5-sonnet-latest"
 
 def generate_explanation(problem, formula, related):
     context = ""
@@ -35,7 +36,7 @@ def generate_explanation(problem, formula, related):
 """
 
     res = client.messages.create(
-        model="claude-3-sonnet-20240229",
+        model=MODEL,
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -43,7 +44,6 @@ def generate_explanation(problem, formula, related):
     return res.content[0].text
 
 
-# 🔥 Dashboard용 AI 학습 코치
 def ai_coach_feedback(history, wrong):
     total = len(history)
     wrong_cnt = len(wrong)
@@ -66,7 +66,7 @@ def ai_coach_feedback(history, wrong):
 """
 
     res = client.messages.create(
-        model="claude-3-sonnet-20240229",
+        model=MODEL,
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
