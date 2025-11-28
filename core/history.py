@@ -1,3 +1,4 @@
+# core/history.py
 from core.db import supabase
 
 def save_history(user_id: str, problem: str, formula: str, explanation: str):
@@ -5,9 +6,14 @@ def save_history(user_id: str, problem: str, formula: str, explanation: str):
         "user_id": user_id,
         "problem": problem,
         "formula": formula,
-        "explanation": explanation
+        "explanation": explanation,
     }).execute()
 
 def get_history(user_id: str):
-    res = supabase.table("history").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-    return res.data
+    return (
+        supabase.table("history")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )

@@ -1,7 +1,16 @@
+# core/db.py
 import os
-from supabase import create_client
+import streamlit as st
+from supabase import create_client, Client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+@st.cache_resource
+def get_supabase() -> Client:
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    if not url or not key:
+        raise ValueError("❌ Supabase 환경변수 누락")
+
+    return create_client(url, key)
+
+supabase = get_supabase()
