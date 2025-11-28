@@ -1,3 +1,11 @@
+
+import sys
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+sys.path.append(os.path.join(BASE_DIR, "core"))
+
+
 import streamlit as st
 from core.auth import check_login, logout
 from core.db import init_supabase

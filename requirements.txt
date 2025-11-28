@@ -1,4 +1,13 @@
-streamlit
-anthropic
+streamlit==1.31.1
 supabase
-pillow
+anthropic
+Pillow==10.2.0
+numpy
+python-dotenv
+requests
+markdown-it-py==4.0.0
+mdurl==0.1.2
+pygments==2.19.2
+rich==13.7.1
+
+-e .
