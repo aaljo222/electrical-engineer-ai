@@ -4,7 +4,7 @@ pillow
 
 supabase==2.4.6
 gotrue==2.4.3
-postgrest==0.11.3
+postgrest==0.10.6
 storage3==0.7.6
 realtime==1.0.5
 
