@@ -1,209 +1,23 @@
 import streamlit as st
-import anthropic
-import hashlib
-import base64
-import io
-from PIL import Image
-from auth_db import login, signup, get_user, logout, save_history, get_history
+from core.auth import check_login, logout
+from core.db import init_supabase
 
+st.set_page_config(page_title="전기기사 AI 학습 플랫폼", page_icon="⚡", layout="wide")
 
-# -------------------------
-# PAGE CONFIG
-# -------------------------
-st.set_page_config(page_title="전기기사 공식 AI 설명 생성기", page_icon="⚡", layout="wide")
-st.markdown("<style>" + open("theme.css").read() + "</style>", unsafe_allow_html=True)
+supabase = init_supabase()
 
+user = check_login()
+if user:
+    st.sidebar.success(f"{user.email} 님 환영합니다!")
 
-# -------------------------
-# ANTHROPIC CLIENT (SAFE)
-# -------------------------
-if "client" not in st.session_state:
-    st.session_state.client = anthropic.Anthropic(
-        api_key=st.secrets["ANTHROPIC_API_KEY"]
-    )
+    if st.sidebar.button("로그아웃"):
+        logout()
+        st.rerun()
 
-client = st.session_state.client  # 항상 세션에 저장된 client 사용
-
-
-# -------------------------
-# IMAGE ANALYSIS (OCR)
-# -------------------------
-def analyze_image(image_bytes):
-    client = st.session_state.client
-
-    img_b64 = base64.b64encode(image_bytes).decode()
-
-    prompt = """
-전기기사 시험 문제 이미지입니다.
-아래 JSON 형식으로 문제/공식을 정확히 추출하세요:
-
-{
- "problem": "...",
- "formula": "..."
-}
-"""
-
-    message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1200,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": img_b64
-                    }
-                }
-            ]
-        }]
-    )
-
-    import json
-    result = json.loads(message.content[0].text)
-    return result.get("problem", ""), result.get("formula", "")
-
-
-# -------------------------
-# GENERATE EXPLANATION
-# -------------------------
-def generate_explanation(problem, formula):
-    client = st.session_state.client
-
-    prompt = f"""
-전기기사 문제를 단계별로 친절하게 설명하세요.
-
-문제: {problem}
-공식: {formula}
-
-1. 문제 이해  
-2. 필요한 개념  
-3. 공식 유도  
-4. 예제 풀이  
-5. 암기 팁  
-"""
-
-    res = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    return res.content[0].text
-
-
-# -------------------------
-# LOGIN / SIGNUP UI
-# -------------------------
-def login_ui():
-    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='login-title'>⚡ 로그인</div>", unsafe_allow_html=True)
-
-    email = st.text_input("이메일")
-    password = st.text_input("비밀번호", type="password")
-
-    # ---------------- 로그인 ----------------
-    if st.button("로그인", use_container_width=True):
-        res = login(email, password)
-
-        if res is None or res.user is None:
-            st.error("❌ 로그인 실패! 이메일/비밀번호를 확인하세요.")
-            return
-
-        st.success("✔ 로그인 성공!")
-        st.session_state.user = res.user
-        st.experimental_rerun()
-
-    st.markdown("----")
-    st.subheader("회원가입")
-
-    email2 = st.text_input("가입 이메일")
-    password2 = st.text_input("가입 비밀번호", type="password")
-
-    # ---------------- 회원가입 ----------------
-    if st.button("회원가입", use_container_width=True):
-        user, error = signup(email2, password2)
-
-        if error:
-            st.error(error)
-        else:
-            st.success("🎉 가입 완료! 이메일 인증을 완료하세요.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# --------------------------------------------------------------
-# MAIN APPLICATION LOGIC
-# --------------------------------------------------------------
-user = get_user()
-
-# 로그인 안 된 상태면 로그인 UI 표시
-if not user:
-    login_ui()
-    st.stop()
-
-
-# -------------------------
-# LOGGED-IN UI
-# -------------------------
-st.sidebar.success(f"로그인됨: {user.email}")
-
-if st.sidebar.button("로그아웃"):
-    logout()
-    st.experimental_rerun()
-
-
-# -------------------------
-# MAIN FEATURE UI
-# -------------------------
-st.title("⚡ 전기기사 공식 AI 설명 생성기")
-
-uploaded = st.file_uploader("📸 문제 이미지 업로드", type=["png", "jpg", "jpeg"])
-
-auto_problem = ""
-auto_formula = ""
-
-if uploaded:
-    image = Image.open(uploaded)
-    buf = io.BytesIO()
-    image.convert("RGB").save(buf, format="JPEG")
-    auto_problem, auto_formula = analyze_image(buf.getvalue())
-
-
-st.divider()
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("📝 문제 입력")
-    problem_text = st.text_area("문제", auto_problem, height=150)
-    formula_text = st.text_input("공식", auto_formula)
-
-with col2:
-    st.info("문제를 입력하거나 이미지 업로드 후 '설명 생성하기'를 누르세요.")
-
-
-st.divider()
-
-# -------- EXECUTE EXPLANATION --------
-if st.button("📖 설명 생성하기", type="primary"):
-    if problem_text.strip() == "" or formula_text.strip() == "":
-        st.error("문제/공식을 입력하세요.")
-    else:
-        with st.spinner("AI가 설명을 생성 중입니다..."):
-            explanation = generate_explanation(problem_text, formula_text)
-
-        st.success("완료!")
-        st.markdown(explanation)
-
-        # 히스토리 저장
-        save_history(user.id, problem_text, formula_text, explanation)
-
-        st.download_button(
-            "📥 텍스트 다운로드",
-            data=explanation,
-            file_name="explanation.txt"
-        )
+    st.sidebar.markdown("---")
+    st.sidebar.page_link("pages/1_문제_풀이.py", label="📘 문제 풀이")
+    st.sidebar.page_link("pages/2_오답노트.py", label="📕 오답노트")
+    st.sidebar.page_link("pages/3_추천문제.py", label="🎯 추천 문제")
+    st.sidebar.page_link("pages/4_프로필.py", label="👤 프로필")
+else:
+    st.switch_page("pages/login.py")
