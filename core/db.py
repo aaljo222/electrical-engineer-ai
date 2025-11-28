@@ -5,7 +5,7 @@ import os
 
 def get_conn():
     return psycopg2.connect(
-        os.environ["SUPABASE_URL"],
+        os.environ["DATABASE_URL"],
         cursor_factory=psycopg2.extras.RealDictCursor
     )
 
