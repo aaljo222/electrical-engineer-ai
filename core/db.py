@@ -1,30 +1,21 @@
-import psycopg2
+from supabase import create_client
 import os
 
-def get_conn():
-    url = os.environ["DATABASE_URL"]  # postgres://xxxx
-    return psycopg2.connect(url)
+url = os.environ["SUPABASE_URL"]
+key = os.environ["SUPABASE_KEY"]
 
-def fetch_one(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    row = cur.fetchone()
-    conn.close()
-    return row
+supabase = create_client(url, key)
 
-def fetch_all(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+def fetch_one(table, column, value):
+    res = supabase.table(table).select("*").eq(column, value).single().execute()
+    if res.data:
+        return res.data
+    return None
 
-# ⭐⭐⭐ 여기 추가 ⭐⭐⭐
-def execute(query, params=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(query, params or ())
-    conn.commit()
-    conn.close()
+def fetch_all(table):
+    res = supabase.table(table).select("*").execute()
+    return res.data
+
+def insert(table, data: dict):
+    res = supabase.table(table).insert(data).execute()
+    return res.data

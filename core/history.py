@@ -1,11 +1,17 @@
 from core.db import execute, fetch_all
 
 
+from core.db import insert
+
 def save_history(user_id, problem, formula, explanation):
-    execute(
-        "INSERT INTO history (user_id, problem, formula, explanation) VALUES (%s, %s, %s, %s)",
-        (user_id, problem, formula, explanation)
-    )
+    data = {
+        "user_id": user_id,
+        "problem": problem,
+        "formula": formula,
+        "explanation": explanation
+    }
+    insert("history", data)
+
 
 
 def get_history(user_id):
