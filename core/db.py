@@ -11,8 +11,9 @@ supabase = get_client()
 
 # 1) 단일 row 조회
 def fetch_one(table: str, column: str, value):
-    res = supabase.table(table).select("*").eq(column, value).single().execute()
+    res = supabase.table(table).select("*").eq(column, value).maybe_single().execute()
     return res.data
+
 
 # 2) 전체 조회
 def fetch_all(table: str):
