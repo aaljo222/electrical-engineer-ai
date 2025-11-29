@@ -1,24 +1,36 @@
 import streamlit as st
-from core.ocr import analyze_image
+from core.auth import check_login
+from core.ocr import extract_text_from_image
 from core.explain import solve_problem
+from core.db import supabase
 
-st.title("📘 문제 풀이")
+user = check_login()
 
-uploaded = st.file_uploader("문제 사진 업로드", type=["jpg", "jpeg", "png"])
+st.title("🧠 문제 OCR + AI 풀이 생성")
 
-if uploaded:
-    st.success("이미지가 업로드되었습니다.")
+uploaded_file = st.file_uploader("문제 이미지 업로드", type=["png", "jpg", "jpeg"])
 
-    # OCR
-    with st.spinner("이미지를 분석 중입니다. 잠시만 기다려주세요..."):
-        ocr_text = analyze_image(uploaded)
+if uploaded_file:
+    st.image(uploaded_file, caption="업로드된 문제 이미지")
 
-    st.subheader("📄 OCR 인식 결과")
-    st.write(ocr_text)
+    with st.spinner("🔍 OCR 처리 중..."):
+        extracted_text = extract_text_from_image(uploaded_file)
+    
+    st.subheader("📘 OCR 결과(문제 텍스트)")
+    st.text(extracted_text)
 
-    if st.button("문제 풀이 생성"):
-        with st.spinner("AI가 풀이를 생성 중입니다..."):
-            result = solve_problem(ocr_text)
+    if st.button("🧠 AI 문제 풀이 생성"):
+        with st.spinner("Claude가 문제를 분석 중입니다..."):
+            solution = solve_problem(extracted_text)
 
-        st.subheader("🧠 AI 풀이 결과")
-        st.write(result)
+        st.subheader("📘 AI 생성 문제 풀이")
+        st.write(solution)
+
+        # Supabase 저장
+        supabase.table("history").insert({
+            "user_id": user["id"],
+            "problem_text": extracted_text,
+            "solution": solution
+        }).execute()
+
+        st.success("기록이 저장되었습니다.")
