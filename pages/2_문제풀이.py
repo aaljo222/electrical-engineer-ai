@@ -53,8 +53,9 @@ if uploaded_file:
         st.subheader("📘 정답")
         st.write(formula)
 
-        st.subheader("📘 풀이 과정")
-        st.write(explanation)
+       st.subheader("🧩 풀이 과정")
+       st.markdown(explanation.replace("\n", "  \n"), unsafe_allow_html=True)
+
 
         # ✔ save_history()를 사용하여 올바르게 저장
         save_history(
