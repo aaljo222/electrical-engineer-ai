@@ -10,7 +10,8 @@ if not user:
 
 st.title("📊 사용자 학습 대시보드")
 
-history = get_history(user["id"])
+result = get_history(user["id"])
+history = result.data or []
 
 st.write("### 최근 학습 기록")
 st.table(history[:10])
