@@ -12,25 +12,23 @@ uploaded_file = st.file_uploader("문제 이미지 업로드", type=["png", "jpg
 
 
 def parse_claude_answer(answer: str):
-    lines = answer.split("\n")
+    """
+    Claude의 구조화된 답변을 정확하게 파싱하여
+    formula(정답), explanation(풀이)만 분리
+    """
 
     formula = ""
     explanation = ""
-    explanation_start = False
 
-    for line in lines:
-        if "정답:" in line:
-            formula = line.replace("정답:", "").strip()
+    # 구간 나누기
+    if "정답:" in answer:
+        formula = answer.split("정답:")[1].split("상세")[0].strip()
 
-        elif "상세 풀이 과정:" in line:
-            explanation_start = True
-            continue
-
-        elif "사용된 개념:" in line:
-            explanation_start = False
-
-        elif explanation_start:
-            explanation += line + "\n"
+    if "상세 풀이 과정:" in answer:
+        explanation = answer.split("상세 풀이 과정:")[1]
+        # "사용된 개념:" 이전까지만 추출
+        if "사용된 개념:" in explanation:
+            explanation = explanation.split("사용된 개념:")[0]
 
     return formula.strip(), explanation.strip()
 
